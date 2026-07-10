@@ -55,7 +55,7 @@ In an app repo (e.g. grapplingtracker), call the reusable workflow:
 ```yaml
 jobs:
   deploy:
-    uses: Wiltzsu/platform/.github/workflows/reusable-deploy-laravel.yml@main
+    uses: Wiltzsu/platform/.github/workflows/reusable-deploy-laravel.yml@master
     with:
       deploy_path: /var/www/grapplingtracker
       php_version: "8.4"
