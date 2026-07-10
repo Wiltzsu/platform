@@ -1,0 +1,11 @@
+---
+- name: Reload ssh
+  ansible.builtin.systemd:
+    name: ssh
+    state: reloaded
+
+- name: Restart mysql
+  ansible.builtin.systemd:
+    name: mysql
+    state: restarted
+  when: ansible_facts['service_mgr'] == 'systemd'

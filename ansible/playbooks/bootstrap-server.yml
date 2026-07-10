@@ -1,0 +1,37 @@
+---
+# Bootstrap a fresh Ubuntu VPS: baseline hardening golden path.
+#
+# Usage:
+#   ansible-playbook -i inventory/hosts.yml playbooks/bootstrap-server.yml
+#
+# Keep an open SSH session while testing each change in a second terminal.
+
+- name: Bootstrap Ubuntu server
+  hosts: all
+  gather_facts: true
+
+  pre_tasks:
+    - name: Require Ubuntu
+      ansible.builtin.assert:
+        that:
+          - ansible_facts['os_family'] == "Debian"
+        fail_msg: "This playbook targets Ubuntu/Debian only."
+
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+  roles:
+    - role: common
+    - role: hardening
+    - role: ufw
+    - role: fail2ban
+    - role: unattended_upgrades
+
+  post_tasks:
+    - name: Remind operator to test SSH in a new session
+      ansible.builtin.debug:
+        msg: >-
+          Bootstrap complete. Open a NEW SSH session to verify login before
+          closing this one. See docs/getting-started.md if locked out.

@@ -1,0 +1,10 @@
+# Copy to hosts.yml and fill in real values. hosts.yml is gitignored.
+
+all:
+  hosts:
+    production:
+      ansible_host: 203.0.113.10
+      ansible_user: root
+    # staging:
+    #   ansible_host: 203.0.113.11
+    #   ansible_user: deploy
