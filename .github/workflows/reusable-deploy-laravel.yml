@@ -1,0 +1,124 @@
+name: Reusable Laravel deploy
+
+on:
+  workflow_call:
+    inputs:
+      deploy_path:
+        description: Remote application directory (e.g. /var/www/grapplingtracker)
+        required: true
+        type: string
+      php_version:
+        description: PHP version for setup-php and nginx fastcgi reference
+        required: false
+        type: string
+        default: "8.4"
+      node_version:
+        description: Node.js version for frontend build
+        required: false
+        type: string
+        default: "20"
+      run_migrations:
+        description: Run php artisan migrate --force after deploy
+        required: false
+        type: boolean
+        default: true
+    secrets:
+      SSH_KEY:
+        required: true
+      HOST:
+        required: true
+      USER:
+        required: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: npm
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ inputs.php_version }}
+          extensions: bcmath, ctype, dom, fileinfo, json, mbstring, mysqli, openssl, pdo_mysql, tokenizer, xml
+          coverage: none
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Install Composer dependencies
+        run: composer install --no-dev --optimize-autoloader
+
+      - name: Build frontend assets
+        run: npm run build
+
+      - name: Upload application to server
+        env:
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+          HOST: ${{ secrets.HOST }}
+          USER: ${{ secrets.USER }}
+          DEPLOY_PATH: ${{ inputs.deploy_path }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+          REMOTE="${USER}@${HOST}"
+          SSH_OPTS=(-o StrictHostKeyChecking=no -o BatchMode=yes -o ConnectTimeout=30)
+
+          echo "Testing SSH connection to ${REMOTE}..."
+          ssh "${SSH_OPTS[@]}" "$REMOTE" "mkdir -p '$DEPLOY_PATH' && echo 'SSH OK'"
+
+          echo "Uploading application files..."
+          tar -cf - \
+            app \
+            bootstrap \
+            config \
+            database \
+            public \
+            resources \
+            routes \
+            artisan \
+            composer.json \
+            composer.lock \
+            | ssh "${SSH_OPTS[@]}" "$REMOTE" "cd '$DEPLOY_PATH' && tar -xf -"
+
+      - name: Run remote deploy commands
+        env:
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+          HOST: ${{ secrets.HOST }}
+          USER: ${{ secrets.USER }}
+          DEPLOY_PATH: ${{ inputs.deploy_path }}
+          RUN_MIGRATIONS: ${{ inputs.run_migrations }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+          REMOTE="${USER}@${HOST}"
+          SSH_OPTS=(-o StrictHostKeyChecking=no -o BatchMode=yes -o ConnectTimeout=30)
+
+          ssh "${SSH_OPTS[@]}" "$REMOTE" "DEPLOY_PATH='$DEPLOY_PATH' RUN_MIGRATIONS='$RUN_MIGRATIONS' bash -s" << 'EOF'
+            set -euo pipefail
+            cd "$DEPLOY_PATH"
+            composer install --no-dev --optimize-autoloader
+            php artisan config:cache
+            php artisan route:cache
+            php artisan view:cache
+            if [[ "$RUN_MIGRATIONS" == "true" ]]; then
+              php artisan migrate --force
+            fi
+          EOF

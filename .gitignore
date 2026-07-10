@@ -1,0 +1,20 @@
+# Local inventory and secrets — never commit real values
+ansible/inventory/hosts.yml
+ansible/group_vars/all.yml
+ansible/group_vars/*.local.yml
+ansible/*.retry
+
+# Terraform
+terraform/**/.terraform/
+terraform/**/*.tfstate
+terraform/**/*.tfstate.*
+terraform/**/*.tfvars
+terraform/**/.terraform.lock.hcl
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+.env
+.env.*

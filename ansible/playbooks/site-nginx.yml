@@ -1,0 +1,13 @@
+---
+# Placeholder: nginx vhost + SSL for a new site.
+# Not implemented yet — track in Linear / repo roadmap.
+
+- name: Configure nginx site
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Not implemented
+      ansible.builtin.fail:
+        msg: >-
+          site-nginx playbook is not implemented yet. Use templates/nginx-site.conf.j2
+          manually or wait for the nginx role.

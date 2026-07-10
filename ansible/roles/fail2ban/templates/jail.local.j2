@@ -1,0 +1,14 @@
+[DEFAULT]
+bantime = 1d
+findtime = 10m
+maxretry = 3
+backend = auto
+banaction = iptables-multiport
+banaction_allports = iptables-allports
+
+[sshd]
+port = 22
+enabled = true
+maxretry = {{ platform_fail2ban_sshd_maxretry }}
+bantime = {{ platform_fail2ban_sshd_bantime }}
+findtime = {{ platform_fail2ban_sshd_findtime }}

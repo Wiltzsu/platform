@@ -1,0 +1,19 @@
+# Copy to all.yml and customize. all.yml is gitignored.
+
+# SSH: users allowed to log in (space-separated in sshd_config)
+platform_ssh_allowed_users:
+  - deploy
+
+# UFW: allow HTTP/HTTPS for web servers
+platform_ufw_allow_web: true
+
+# UFW: restrict SSH to a single IP (optional — leave empty to allow OpenSSH globally)
+# platform_ufw_ssh_from_ip: "203.0.113.50"
+
+# fail2ban SSH jail
+platform_fail2ban_sshd_maxretry: 3
+platform_fail2ban_sshd_bantime: 1h
+platform_fail2ban_sshd_findtime: 10m
+
+# Bind MySQL to localhost when mysql role/package is present
+platform_mysql_bind_localhost: true

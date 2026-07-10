@@ -1,0 +1,47 @@
+---
+- name: Ensure sshd hardening options are set
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+    validate: "sshd -t -f %s"
+    backup: true
+  loop:
+    - regexp: "^#?PermitRootLogin"
+      line: "PermitRootLogin no"
+    - regexp: "^#?PasswordAuthentication"
+      line: "PasswordAuthentication no"
+    - regexp: "^#?PubkeyAuthentication"
+      line: "PubkeyAuthentication yes"
+    - regexp: "^#?PermitEmptyPasswords"
+      line: "PermitEmptyPasswords no"
+    - regexp: "^#?MaxAuthTries"
+      line: "MaxAuthTries 3"
+  notify: Reload ssh
+
+- name: Configure AllowUsers
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "^#?AllowUsers"
+    line: "AllowUsers {{ platform_ssh_allowed_users | join(' ') }}"
+    validate: "sshd -t -f %s"
+    backup: true
+  when: platform_ssh_allowed_users | length > 0
+  notify: Reload ssh
+
+- name: Bind MySQL to localhost
+  when: platform_mysql_bind_localhost | default(true)
+  block:
+    - name: Check if MySQL config exists
+      ansible.builtin.stat:
+        path: /etc/mysql/mysql.conf.d/mysqld.cnf
+      register: platform_mysql_conf
+
+    - name: Set bind-address in mysqld.cnf
+      ansible.builtin.lineinfile:
+        path: /etc/mysql/mysql.conf.d/mysqld.cnf
+        regexp: "^bind-address"
+        line: "bind-address = 127.0.0.1"
+        backup: true
+      when: platform_mysql_conf.stat.exists
+      notify: Restart mysql
