@@ -97,6 +97,15 @@ jobs:
           echo "Testing SSH connection to ${REMOTE}..."
           ssh "${SSH_OPTS[@]}" "$REMOTE" "mkdir -p '$DEPLOY_PATH' && echo 'SSH OK'"
 
+          echo "Preparing deploy directory permissions..."
+          ssh "${SSH_OPTS[@]}" "$REMOTE" bash -s <<EOF
+            set -euo pipefail
+            mkdir -p '$DEPLOY_PATH'
+            if sudo -n chown -R "\$(whoami):www-data" '$DEPLOY_PATH' 2>/dev/null; then
+              sudo -n chmod -R g+w '$DEPLOY_PATH' 2>/dev/null || true
+            fi
+          EOF
+
           echo "Uploading application files..."
           tar -cf - \
             app \
@@ -109,7 +118,7 @@ jobs:
             artisan \
             composer.json \
             composer.lock \
-            | ssh "${SSH_OPTS[@]}" "$REMOTE" "cd '$DEPLOY_PATH' && tar -xf -"
+            | ssh "${SSH_OPTS[@]}" "$REMOTE" "cd '$DEPLOY_PATH' && tar -xf - --overwrite --no-same-owner -m"
 
       - name: Run remote deploy commands
         env:
