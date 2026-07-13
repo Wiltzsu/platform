@@ -66,15 +66,19 @@ jobs:
       USER: ${{ secrets.USER }}
 ```
 
+Set up the deploy key and secrets first — see [docs/getting-started.md — GitHub Actions deploy key](docs/getting-started.md#set-up-a-github-actions-deploy-key).
+
 ## Roadmap
 
 - [x] Ansible bootstrap playbook (hardening golden path)
 - [x] Reusable Laravel deploy workflow
-- [ ] nginx site playbook + PHP-FPM role
+- [ ] **Verify server hardening** on wiltzsu.dev target host
+- [ ] Bedrock site provision (`site-bedrock.yml`) — draft ready
+- [ ] Reusable Bedrock deploy workflow — draft ready
+- [ ] nginx site playbook hardened for production use
 - [ ] Staging environment convention (`staging.*` subdomains)
 - [ ] Terraform module for Hetzner CX servers
 - [ ] Reusable WordPress/Bedrock deploy workflow
-- [ ] Uptime monitoring as code
 
 ## Related repos
 

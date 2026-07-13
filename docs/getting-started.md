@@ -53,10 +53,16 @@ Order matters:
 
 ## Adding a new site (manual for now)
 
-1. Create `/var/www/myapp` owned by deploy user + `www-data`
+1. Prepare the app directory (see [setup-app-directory.sh](https://github.com/Wiltzsu/linux-server-utils/blob/master/web/setup-app-directory.sh)):
+
+   ```bash
+   sudo /usr/local/src/linux-server-utils/web/setup-app-directory.sh /var/www/myapp william
+   ```
+
 2. Copy `templates/nginx-site.conf.j2` to `/etc/nginx/sites-available/myapp.conf`
 3. `sudo ln -s ... sites-enabled/` and `sudo certbot --nginx -d myapp.example.com`
 4. Wire app repo to `reusable-deploy-laravel.yml` or add a custom workflow
+5. Add [GitHub Actions deploy key secrets](#set-up-a-github-actions-deploy-key) to the app repo
 
 An Ansible `site-nginx` playbook is on the roadmap.
 
@@ -64,6 +70,64 @@ An Ansible `site-nginx` playbook is on the roadmap.
 
 | Secret | Description |
 |--------|-------------|
-| `SSH_KEY` | Private key for deploy user |
-| `HOST` | Server IP or hostname |
-| `USER` | SSH username (deploy user) |
+| `SSH_KEY` | Private deploy key (no passphrase) — see below |
+| `HOST` | Server IP or hostname (origin server, not CDN) |
+| `USER` | SSH username (same user for every app on that server) |
+
+Use the **same** `HOST`, `USER`, and `SSH_KEY` in every app repo that deploys to the same VPS. Each app workflow only differs by `deploy_path`.
+
+## Set up a GitHub Actions deploy key
+
+This is separate from the passphrase-protected key created by [`create-user.sh`](https://github.com/Wiltzsu/linux-server-utils/blob/master/user/create-user.sh) for laptop login. GitHub Actions cannot enter a key passphrase, so CI needs its own key.
+
+### 1. On the server
+
+SSH in as your deploy user (or root) and run:
+
+```bash
+sudo /usr/local/src/linux-server-utils/user/setup-github-deploy-key.sh william
+```
+
+Or, if you are already logged in as `william`:
+
+```bash
+~/path/to/linux-server-utils/user/setup-github-deploy-key.sh
+```
+
+The script creates `~/.ssh/github_actions_deploy`, appends the public key to `authorized_keys`, and prints the private key path.
+
+### 2. In GitHub (per app repo)
+
+Open **Settings → Secrets and variables → Actions** and add:
+
+| Secret | Value |
+|--------|--------|
+| `USER` | SSH username (e.g. `william`) |
+| `HOST` | Server IP |
+| `SSH_KEY` | Full private key from `cat ~/.ssh/github_actions_deploy` |
+
+Include the `-----BEGIN OPENSSH PRIVATE KEY-----` / `-----END ...-----` lines. Do not commit this key to git.
+
+### 3. Verify before the first deploy
+
+From your laptop (after saving the private key locally):
+
+```bash
+chmod 600 ~/.ssh/github_actions_deploy
+ssh -i ~/.ssh/github_actions_deploy -o IdentitiesOnly=yes william@YOUR_SERVER_IP "echo SSH OK"
+```
+
+You should see `SSH OK`. Then push to `master` (or re-run the deploy workflow).
+
+### Checklist when changing SSH access
+
+If you disable root login or rename the deploy user, update all of the following:
+
+1. `AllowUsers` in `/etc/ssh/sshd_config` includes the deploy user
+2. GitHub secret `USER` matches that username
+3. The deploy public key is still in that user's `authorized_keys`
+4. App directories are owned by `user:www-data` (see `setup-app-directory.sh`)
+
+### One key, many apps
+
+SSH authenticates the **user**, not the site. One deploy key on the server can deploy to `/var/www/grapplingtracker`, `/var/www/mydevsite`, and so on — each app workflow sets its own `deploy_path`. Use separate keys per app only if you want tighter isolation when a repo secret leaks.
