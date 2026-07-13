@@ -68,13 +68,31 @@ jobs:
         run: |
           set -euo pipefail
 
+          if [[ -z "${SSH_KEY//[[:space:]]/}" ]]; then
+            echo "Error: SSH_KEY secret is empty. Add the deploy private key to the app repo secrets."
+            exit 1
+          fi
+
+          if [[ -z "${HOST//[[:space:]]/}" || -z "${USER//[[:space:]]/}" ]]; then
+            echo "Error: HOST and USER secrets must be set in the app repo."
+            exit 1
+          fi
+
           mkdir -p ~/.ssh
-          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+
+          if ! ssh-keygen -y -f ~/.ssh/deploy_key >/dev/null 2>&1; then
+            echo "Error: SSH_KEY is not a valid unencrypted private key."
+            echo "Generate a deploy key with: ssh-keygen -t ed25519 -f deploy_key -N \"\""
+            echo "Then add deploy_key.pub to the server's authorized_keys and deploy_key to GitHub SSH_KEY."
+            exit 1
+          fi
+
           ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
 
           REMOTE="${USER}@${HOST}"
-          SSH_OPTS=(-o StrictHostKeyChecking=no -o BatchMode=yes -o ConnectTimeout=30)
+          SSH_OPTS=(-i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -o BatchMode=yes -o ConnectTimeout=30)
 
           echo "Testing SSH connection to ${REMOTE}..."
           ssh "${SSH_OPTS[@]}" "$REMOTE" "mkdir -p '$DEPLOY_PATH' && echo 'SSH OK'"
@@ -104,12 +122,12 @@ jobs:
           set -euo pipefail
 
           mkdir -p ~/.ssh
-          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
 
           REMOTE="${USER}@${HOST}"
-          SSH_OPTS=(-o StrictHostKeyChecking=no -o BatchMode=yes -o ConnectTimeout=30)
+          SSH_OPTS=(-i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -o BatchMode=yes -o ConnectTimeout=30)
 
           ssh "${SSH_OPTS[@]}" "$REMOTE" "DEPLOY_PATH='$DEPLOY_PATH' RUN_MIGRATIONS='$RUN_MIGRATIONS' bash -s" << 'EOF'
             set -euo pipefail
