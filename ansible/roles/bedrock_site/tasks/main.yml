@@ -1,0 +1,109 @@
+---
+- name: Install nginx
+  ansible.builtin.apt:
+    name: nginx
+    state: present
+
+- name: Install PHP packages for Bedrock
+  ansible.builtin.apt:
+    name: "{{ bedrock_php_packages }}"
+    state: present
+
+- name: Ensure PHP-FPM is running
+  ansible.builtin.systemd:
+    name: "php{{ bedrock_php_version }}-fpm"
+    state: started
+    enabled: true
+
+- name: Install Python MySQL driver for Ansible mysql modules
+  ansible.builtin.apt:
+    name: python3-pymysql
+    state: present
+
+- name: Create MySQL database
+  community.mysql.mysql_db:
+    name: "{{ bedrock_db_name }}"
+    state: present
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+  become: true
+
+- name: Ensure MySQL user has privileges on Bedrock database
+  community.mysql.mysql_user:
+    name: "{{ bedrock_db_user }}"
+    password: "{{ bedrock_db_password }}"
+    priv: "{{ bedrock_db_name }}.*:ALL"
+    host: localhost
+    state: present
+    append_privs: true
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+  become: true
+  no_log: true
+
+- name: Create site directory
+  ansible.builtin.file:
+    path: "{{ bedrock_deploy_path }}"
+    state: directory
+    owner: "{{ bedrock_deploy_user }}"
+    group: www-data
+    mode: "0775"
+
+- name: Create uploads directory
+  ansible.builtin.file:
+    path: "{{ bedrock_deploy_path }}/web/app/uploads"
+    state: directory
+    owner: "{{ bedrock_deploy_user }}"
+    group: www-data
+    mode: "0775"
+
+- name: Deploy nginx vhost for Bedrock
+  ansible.builtin.template:
+    src: nginx-bedrock.conf.j2
+    dest: "/etc/nginx/sites-available/{{ bedrock_site_name }}.conf"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload nginx
+
+- name: Enable nginx site
+  ansible.builtin.file:
+    src: "/etc/nginx/sites-available/{{ bedrock_site_name }}.conf"
+    dest: "/etc/nginx/sites-enabled/{{ bedrock_site_name }}.conf"
+    state: link
+  notify: Reload nginx
+
+- name: Remove default nginx site if present
+  ansible.builtin.file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  notify: Reload nginx
+
+- name: Check if .env already exists
+  ansible.builtin.stat:
+    path: "{{ bedrock_deploy_path }}/.env"
+  register: bedrock_env_file
+
+- name: Deploy .env template (first provision only)
+  ansible.builtin.template:
+    src: dotenv.j2
+    dest: "{{ bedrock_deploy_path }}/.env"
+    owner: "{{ bedrock_deploy_user }}"
+    group: www-data
+    mode: "0640"
+  when: not bedrock_env_file.stat.exists
+
+- name: Note about git clone
+  ansible.builtin.debug:
+    msg: >-
+      Skipping git clone (bedrock_git_repo not set or deploy via GitHub Actions).
+      Clone manually or push deploy workflow, then run composer install on server.
+  when: bedrock_git_repo | default('') | length == 0
+
+- name: Clone site repository (optional first provision)
+  ansible.builtin.git:
+    repo: "{{ bedrock_git_repo }}"
+    dest: "{{ bedrock_deploy_path }}"
+    version: "{{ bedrock_git_branch | default('master') }}"
+    accept_hostkey: true
+  become: true
+  become_user: "{{ bedrock_deploy_user }}"
+  when: bedrock_git_repo | default('') | length > 0

@@ -1,13 +1,13 @@
 ---
-# Placeholder: nginx vhost + SSL for a new site.
-# Not implemented yet — track in Linear / repo roadmap.
+# Superseded by site-bedrock.yml for wiltzsu.dev / Bedrock sites.
+# See docs/drafts/bedrock-wiltzsu-deploy-plan.md
 
 - name: Configure nginx site
   hosts: all
   gather_facts: false
   tasks:
-    - name: Not implemented
+    - name: Use site-bedrock playbook instead
       ansible.builtin.fail:
         msg: >-
-          site-nginx playbook is not implemented yet. Use templates/nginx-site.conf.j2
-          manually or wait for the nginx role.
+          Use playbooks/site-bedrock.yml for Bedrock WordPress sites.
+          This placeholder is kept for future generic nginx-only runs.
