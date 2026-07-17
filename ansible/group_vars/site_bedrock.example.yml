@@ -1,0 +1,28 @@
+# Copy to site_bedrock.yml when ready. Gitignored pattern: add site_bedrock.yml to .gitignore if it holds secrets.
+
+# Site identity
+bedrock_site_name: mydevsite
+bedrock_domain: wiltzsu.dev
+bedrock_domain_aliases:
+  - www.wiltsu.dev
+
+# Paths
+bedrock_deploy_path: /var/www/wiltzsu
+bedrock_deploy_user: william
+
+# PHP (match Bedrock composer.json: >=8.3; same as Grappling Tracker on this host)
+bedrock_php_version: "8.4"
+
+# MySQL — set real values locally; prefer Ansible Vault for production
+bedrock_db_name: mydevsite
+bedrock_db_user: mydevsite
+bedrock_db_password: CHANGE_ME
+bedrock_db_host: "127.0.0.1"
+
+# WordPress URLs (used in .env template on first provision only)
+bedrock_wp_home: "https://wiltzsu.dev"
+bedrock_wp_env: production
+
+# Optional: clone repo on first provision (leave empty to deploy only via GitHub Actions)
+# bedrock_git_repo: "git@github.com:Wiltzsu/mydevsite.git"
+# bedrock_git_branch: master

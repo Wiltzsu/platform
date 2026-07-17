@@ -1,0 +1,13 @@
+---
+bedrock_php_packages:
+  - "php{{ bedrock_php_version }}-fpm"
+  - "php{{ bedrock_php_version }}-cli"
+  - "php{{ bedrock_php_version }}-mysql"
+  - "php{{ bedrock_php_version }}-xml"
+  - "php{{ bedrock_php_version }}-mbstring"
+  - "php{{ bedrock_php_version }}-curl"
+  - "php{{ bedrock_php_version }}-zip"
+  - "php{{ bedrock_php_version }}-gd"
+  - "php{{ bedrock_php_version }}-intl"
+
+bedrock_php_fpm_pool_user: www-data

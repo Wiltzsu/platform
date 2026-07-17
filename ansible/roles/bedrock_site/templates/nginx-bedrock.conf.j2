@@ -1,0 +1,31 @@
+# Bedrock WordPress — nginx docroot is project /web, not /public
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name {{ bedrock_domain }}{% for alias in bedrock_domain_aliases | default([]) %} {{ alias }}{% endfor %};
+
+    root {{ bedrock_deploy_path }}/web;
+    index index.php index.html;
+
+    access_log /var/log/nginx/{{ bedrock_site_name }}_access.log;
+    error_log /var/log/nginx/{{ bedrock_site_name }}_error.log;
+
+    # Bedrock: block access to above web root
+    location ~ /\.env {
+        deny all;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.php?$args;
+    }
+
+    location ~ \.php$ {
+        include snippets/fastcgi-php.conf;
+        fastcgi_pass unix:/run/php/php{{ bedrock_php_version }}-fpm.sock;
+    }
+
+    location ~ /\.(?!well-known).* {
+        deny all;
+    }
+}

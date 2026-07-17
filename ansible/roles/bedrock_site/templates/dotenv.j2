@@ -1,0 +1,18 @@
+DB_NAME='{{ bedrock_db_name }}'
+DB_USER='{{ bedrock_db_user }}'
+DB_PASSWORD='{{ bedrock_db_password }}'
+DB_HOST='{{ bedrock_db_host }}'
+
+WP_ENV='{{ bedrock_wp_env }}'
+WP_HOME='{{ bedrock_wp_home }}'
+WP_SITEURL="${WP_HOME}/wp"
+
+# Generate salts: https://roots.io/salts.html
+AUTH_KEY='generateme'
+SECURE_AUTH_KEY='generateme'
+LOGGED_IN_KEY='generateme'
+NONCE_KEY='generateme'
+AUTH_SALT='generateme'
+SECURE_AUTH_SALT='generateme'
+LOGGED_IN_SALT='generateme'
+NONCE_SALT='generateme'

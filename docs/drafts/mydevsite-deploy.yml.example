@@ -1,0 +1,22 @@
+# Copy to mydevsite repo as .github/workflows/deploy.yml when ready.
+# DRAFT — after server hardening + site-bedrock.yml + DNS + certbot.
+
+name: Deploy to production
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    uses: Wiltzsu/platform/.github/workflows/reusable-deploy-bedrock.yml@master
+    with:
+      deploy_path: /var/www/wiltzsu
+      theme_path: web/app/themes/mydevsite
+      php_version: "8.4"
+      node_version: "20"
+    secrets:
+      SSH_KEY: ${{ secrets.SSH_KEY }}
+      HOST: ${{ secrets.HOST }}
+      USER: ${{ secrets.USER }}

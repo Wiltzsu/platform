@@ -2,6 +2,7 @@
 ansible/inventory/hosts.yml
 ansible/group_vars/all.yml
 ansible/group_vars/*.local.yml
+ansible/group_vars/site_bedrock.yml
 ansible/*.retry
 
 # Terraform

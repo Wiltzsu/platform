@@ -1,0 +1,131 @@
+name: Reusable Bedrock WordPress deploy
+
+# DRAFT — test on wiltzsu.dev after server hardening + site-bedrock.yml provision.
+
+on:
+  workflow_call:
+    inputs:
+      deploy_path:
+        description: Remote Bedrock project root (e.g. /var/www/mydevsite)
+        required: true
+        type: string
+      theme_path:
+        description: Theme path relative to repo root
+        required: false
+        type: string
+        default: web/app/themes/mydevsite
+      php_version:
+        description: PHP version for setup-php
+        required: false
+        type: string
+        default: "8.4"
+      node_version:
+        description: Node.js version for theme build
+        required: false
+        type: string
+        default: "20"
+    secrets:
+      SSH_KEY:
+        required: true
+      HOST:
+        required: true
+      USER:
+        required: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: npm
+          cache-dependency-path: ${{ inputs.theme_path }}/package-lock.json
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ inputs.php_version }}
+          extensions: curl, dom, gd, intl, mbstring, mysqli, xml, zip
+          coverage: none
+
+      - name: Install Composer dependencies (CI validation)
+        run: composer install --no-dev --optimize-autoloader
+
+      - name: Build theme assets
+        working-directory: ${{ inputs.theme_path }}
+        run: |
+          npm ci
+          npm run build
+
+      - name: Upload Bedrock application to server
+        env:
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+          HOST: ${{ secrets.HOST }}
+          USER: ${{ secrets.USER }}
+          DEPLOY_PATH: ${{ inputs.deploy_path }}
+          THEME_PATH: ${{ inputs.theme_path }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+          REMOTE="${USER}@${HOST}"
+          SSH_OPTS=(-o StrictHostKeyChecking=no -o BatchMode=yes -o ConnectTimeout=30)
+
+          echo "Testing SSH connection to ${REMOTE}..."
+          ssh "${SSH_OPTS[@]}" "$REMOTE" "mkdir -p '$DEPLOY_PATH' && echo 'SSH OK'"
+
+          echo "Uploading Bedrock paths (excludes .env, vendor, uploads, node_modules)..."
+          tar -cf - \
+            --exclude='.env' \
+            --exclude='.env.*' \
+            --exclude='vendor' \
+            --exclude='node_modules' \
+            --exclude='web/wp' \
+            --exclude='web/app/uploads' \
+            --exclude='.git' \
+            config \
+            composer.json \
+            composer.lock \
+            web/app/themes \
+            web/app/mu-plugins \
+            web/app/plugins \
+            web/index.php \
+            web/wp-config.php \
+            | ssh "${SSH_OPTS[@]}" "$REMOTE" "cd '$DEPLOY_PATH' && tar -xf -"
+
+      - name: Run remote deploy commands
+        env:
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+          HOST: ${{ secrets.HOST }}
+          USER: ${{ secrets.USER }}
+          DEPLOY_PATH: ${{ inputs.deploy_path }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+          REMOTE="${USER}@${HOST}"
+          SSH_OPTS=(-o StrictHostKeyChecking=no -o BatchMode=yes -o ConnectTimeout=30)
+
+          ssh "${SSH_OPTS[@]}" "$REMOTE" "DEPLOY_PATH='$DEPLOY_PATH' bash -s" << 'EOF'
+            set -euo pipefail
+            cd "$DEPLOY_PATH"
+            composer install --no-dev --optimize-autoloader
+            if command -v wp >/dev/null 2>&1; then
+              wp cache flush --allow-root 2>/dev/null || true
+            elif [[ -f wp-cli.phar ]]; then
+              php wp-cli.phar cache flush --allow-root 2>/dev/null || true
+            fi
+          EOF
