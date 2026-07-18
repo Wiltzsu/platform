@@ -72,14 +72,11 @@ Set up the deploy key and secrets first — see [docs/getting-started.md — Git
 
 - [x] Ansible bootstrap playbook (hardening golden path)
 - [x] Reusable Laravel deploy workflow
-- [ ] **Verify server hardening** on wiltzsu.dev target host
-- [ ] Bedrock site provision (`site-bedrock.yml`) — draft ready
-- [ ] Reusable Bedrock deploy workflow — draft ready
+- [x] Bedrock site provision (`site-bedrock.yml`) — live on example.com
+- [x] Reusable Bedrock deploy workflow — live on example.com
 - [ ] nginx site playbook hardened for production use
 - [ ] Staging environment convention (`staging.*` subdomains)
 - [ ] Terraform module for Hetzner CX servers
-- [ ] Reusable WordPress/Bedrock deploy workflow
-
 ## Related repos
 
 | Repo | Purpose |
