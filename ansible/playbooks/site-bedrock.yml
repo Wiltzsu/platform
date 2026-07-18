@@ -10,7 +10,7 @@
 #   ansible-playbook -i inventory/hosts.yml playbooks/site-bedrock.yml --check
 #   ansible-playbook -i inventory/hosts.yml playbooks/site-bedrock.yml
 
-- name: Provision Bedrock WordPress site (wiltzsu.dev)
+- name: Provision Bedrock WordPress site (wiltsu.dev)
   hosts: all
   gather_facts: true
   vars_files:
@@ -21,7 +21,7 @@
       ansible.builtin.debug:
         msg: >-
           This playbook is a draft. Confirm server hardening before running.
-          Use --check first. See docs/drafts/bedrock-wiltzsu-deploy-plan.md
+          Use --check first. See docs/drafts/bedrock-wiltsu-deploy-plan.md
 
     - name: Require site_bedrock variables file
       ansible.builtin.stat:

@@ -1,5 +1,5 @@
 # Copy to mydevsite repo as .github/workflows/deploy.yml when ready.
-# DRAFT — after server hardening + site-bedrock.yml + DNS + certbot.
+# Production example — wiltsu.dev (deploy_path must match bedrock_deploy_path in site_bedrock.yml).
 
 name: Deploy to production
 

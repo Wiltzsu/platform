@@ -1,6 +1,6 @@
 name: Reusable Bedrock WordPress deploy
 
-# DRAFT — test on wiltzsu.dev after server hardening + site-bedrock.yml provision.
+# Used by mydevsite on wiltsu.dev — provision with site-bedrock.yml first.
 
 on:
   workflow_call:

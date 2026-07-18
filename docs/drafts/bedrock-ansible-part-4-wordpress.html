@@ -1,0 +1,220 @@
+<!-- wp:heading {"level":1} -->
+<h1 class="wp-block-heading">Personal platform · Part 4: deploying the Bedrock site and going live</h1>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>Part 3 left an empty shell on the server: MySQL database, <code>/var/www/site</code>, nginx vhost, and a templated <code>.env</code>. Part 4 is getting application code onto the box, moving local WordPress content over, and turning on HTTPS. This is the release post.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p><strong>Prerequisite:</strong> <a href="#">Part 3 — Ansible provisioning</a> completed successfully.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">What Part 4 covers</h2>
+<!-- /wp:heading -->
+
+<!-- wp:list -->
+<ul class="wp-block-list"><li>Thin <code>deploy.yml</code> in the Bedrock repo calling the platform reusable workflow</li><li>GitHub Actions secrets and first green deploy</li><li><code>composer install</code> on the server</li><li>Production <code>.env</code> salts</li><li>Local DB export, upload, import</li><li>Rsync <code>web/app/uploads/</code></li><li><code>wp search-replace</code> for production URLs</li><li>DNS and certbot (final go-live steps)</li></ul>
+<!-- /wp:list -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Thin deploy workflow</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>Add <code>.github/workflows/deploy.yml</code> in the Bedrock repo. Same pattern as the Laravel app: secrets stay in the app repo; deploy logic lives in <code>platform</code>.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:code {"language":"yaml"} -->
+<pre class="wp-block-code"><code lang="yaml" class="language-yaml">name: Deploy to production
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    uses: Wiltzsu/platform/.github/workflows/reusable-deploy-bedrock.yml@master
+    with:
+      deploy_path: /var/www/site
+      theme_path: web/app/themes/mydevsite
+      php_version: "8.4"
+      node_version: "20"
+    secrets:
+      SSH_KEY: ${{ secrets.SSH_KEY }}
+      HOST: ${{ secrets.HOST }}
+      USER: ${{ secrets.USER }}</code></pre>
+<!-- /wp:code -->
+
+<!-- wp:paragraph -->
+<p><code>deploy_path</code> must match <code>bedrock_deploy_path</code> from Part 3. The workflow builds theme assets in CI, uploads Bedrock paths over SSH (excluding <code>.env</code>, <code>vendor</code>, and <code>uploads</code>), then runs <code>composer install --no-dev</code> on the server.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">GitHub secrets</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>Same three secrets as my other app on the same server — one deploy key, one host, one SSH user:</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:table -->
+<figure class="wp-block-table"><table class="has-fixed-layout"><thead><tr><th>Secret</th><th>Value</th></tr></thead><tbody><tr><td><code>HOST</code></td><td>Server public IP (origin, not CDN)</td></tr><tr><td><code>USER</code></td><td><code>user</code> — SSH and deploy user</td></tr><tr><td><code>SSH_KEY</code></td><td>Private deploy key from the server (<code>github_actions_deploy</code>) — not your laptop key</td></tr></tbody></table></figure>
+<!-- /wp:table -->
+
+<!-- wp:paragraph -->
+<p>If <code>platform</code> is private, allow the Bedrock repo to call its reusable workflows under GitHub Actions settings.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">First deploy</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>Commit <code>deploy.yml</code> and push to <code>master</code> (the workflow triggers on <code>master</code>, not <code>development</code>). Check the Actions tab — a green run means code is on the server at <code>/var/www/site</code>.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>Then SSH in and install PHP dependencies (WordPress core and plugins come from Composer, not the tar upload):</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:code -->
+<pre class="wp-block-code"><code lang="bash" class="language-bash">cd /var/www/site
+composer install --no-dev --optimize-autoloader</code></pre>
+<!-- /wp:code -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Production .env and salts</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>Ansible created <code>.env</code> with placeholder salts (<code>generateme</code>). Before go-live, replace all eight keys from <a href="https://roots.io/salts.html">roots.io/salts.html</a>. Use a fresh set for production — do not copy local dev salts.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>Confirm <code>DB_NAME</code>, <code>DB_USER</code>, and quoted <code>DB_PASSWORD</code> match production. If the password contains <code>$</code>, keep single quotes around the value in every <code>.env</code> on the server.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Move the database (local → server)</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>Export on the <strong>local</strong> machine where WordPress content lives — not on the server. The production database starts empty; <code>mysqldump</code> on the server would only export that empty shell.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>Local <code>wp</code> CLI was broken on my machine, so I used <code>mysqldump</code> directly:</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:code -->
+<pre class="wp-block-code"><code lang="bash" class="language-bash"># local — DB name from Bedrock .env (e.g. mydevsite)
+mysqldump -u root -p mydevsite > ~/site-export.sql
+
+# copy to server
+rsync -avz ~/site-export.sql server:~/
+
+# server — import into Part 3 database (e.g. site)
+mysql -u user -p site &lt; ~/site-export.sql</code></pre>
+<!-- /wp:code -->
+
+<!-- wp:paragraph -->
+<p>Verify import:</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:code -->
+<pre class="wp-block-code"><code lang="bash" class="language-bash">mysql -u user -p site -e "SHOW TABLES;"
+mysql -u user -p site -e "SELECT COUNT(*) AS posts FROM wp_posts;"
+mysql -u user -p site -e "SELECT option_name, option_value FROM wp_options WHERE option_name IN ('siteurl','home');"</code></pre>
+<!-- /wp:code -->
+
+<!-- wp:paragraph -->
+<p>A post count matching local (e.g. hundreds of rows in <code>wp_posts</code>) confirms the import worked. If <code>siteurl</code> and <code>home</code> still show <code>http://site.local</code>, run search-replace next.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Uploads</h2>
+<!-- /wp:heading -->
+
+<!-- wp:code -->
+<pre class="wp-block-code"><code lang="bash" class="language-bash"># local, from Bedrock project root
+rsync -avz web/app/uploads/ server:/var/www/site/web/app/uploads/</code></pre>
+<!-- /wp:code -->
+
+<!-- wp:paragraph -->
+<p>Deploy excludes <code>uploads</code> from the tar — media stays on the server across deploys and is synced separately for the initial migration.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Search-replace URLs</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>Install WP-CLI on the server once (not included in the deploy tar):</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:code -->
+<pre class="wp-block-code"><code lang="bash" class="language-bash">cd /var/www/site
+curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
+chmod +x wp-cli.phar
+sudo mv wp-cli.phar /usr/local/bin/wp
+
+wp search-replace 'http://site.local' 'https://site.example.com' --all-tables --path=web/wp
+wp search-replace 'https://site.local' 'https://site.example.com' --all-tables --path=web/wp
+wp cache flush --path=web/wp</code></pre>
+<!-- /wp:code -->
+
+<!-- wp:paragraph -->
+<p>Bedrock keeps WordPress core under <code>web/wp</code> — pass <code>--path=web/wp</code> on every WP-CLI command. After search-replace, <code>home</code> should be <code>https://site.example.com</code> and <code>siteurl</code> should be <code>https://site.example.com/wp</code> (Bedrock’s usual layout).</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">DNS and SSL (go-live)</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>In Cloudflare (or your DNS provider), point the <strong>registered</strong> domain at the server — records go in that domain’s zone, not as nested names under another zone:</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:code -->
+<pre class="wp-block-code"><code lang="text" class="language-text">@ (site.example.com)    A       YOUR_SERVER_IP
+www                      CNAME   site.example.com</code></pre>
+<!-- /wp:code -->
+
+<!-- wp:paragraph -->
+<p>Use <strong>DNS only</strong> (grey cloud in Cloudflare) on <code>@</code> and <code>www</code> for the first certbot run if the HTTP-01 challenge fails. Re-enable the proxy after HTTPS works.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:list {"ordered":true} -->
+<ol class="wp-block-list"><li>Confirm <code>curl -I http://site.example.com</code> hits nginx (301 to HTTPS from WordPress is fine once URLs are updated).</li><li><code>sudo certbot --nginx -d site.example.com -d www.site.example.com</code></li><li><code>curl -I https://site.example.com</code> — expect <code>HTTP/2 200</code> without certificate errors.</li><li>Smoke test: home page, blog archive, wp-admin login, one post with media.</li></ol>
+<!-- /wp:list -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Progress checklist</h2>
+<!-- /wp:heading -->
+
+<!-- wp:table -->
+<figure class="wp-block-table"><table class="has-fixed-layout"><thead><tr><th>Step</th><th>Status</th></tr></thead><tbody><tr><td><code>deploy.yml</code> + GitHub secrets</td><td>Done</td></tr><tr><td>First green Actions deploy</td><td>Done</td></tr><tr><td><code>composer install</code> on server</td><td>Done</td></tr><tr><td>Production salts in <code>.env</code></td><td>Done</td></tr><tr><td>Uploads rsync</td><td>Done</td></tr><tr><td>DB export, copy, import</td><td>Done</td></tr><tr><td><code>search-replace</code> (<code>--path=web/wp</code>)</td><td>Done</td></tr><tr><td>DNS + certbot</td><td>Done — live at <code>wiltsu.dev</code></td></tr><tr><td>Browser smoke test</td><td>Done</td></tr></tbody></table></figure>
+<!-- /wp:table -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Gotchas</h2>
+<!-- /wp:heading -->
+
+<!-- wp:list -->
+<ul class="wp-block-list"><li><strong>Push to <code>master</code></strong> — the deploy workflow does not run on <code>development</code> unless you change <code>on.push.branches</code>.</li><li><strong><code>mysqldump</code> direction</strong> — export local, import server. Do not dump the empty production DB.</li><li><strong><code>HOST</code> is the server IP</strong> — origin server for SSH, not a CDN hostname.</li><li><strong><code>SSH_KEY</code> is the CI deploy key</strong> — not the key you use from your laptop.</li><li><strong>Table prefix</strong> — if not <code>wp_</code>, adjust SQL and WP-CLI commands accordingly.</li><li><strong>Registered domain vs Ansible typo</strong> — I configured the wrong spelling in Ansible once. DNS records for the typo inside the real zone became a fourth-level hostname, not a public site. Match <code>bedrock_domain</code> to the domain you own before certbot.</li><li><strong>Deploy path vs nginx <code>root</code></strong> — GitHub Actions can deploy to <code>/var/www/wiltzsu</code> while nginx serves <code>/var/www/wiltsu/web</code> via symlink; only the paths in config need to exist.</li><li><strong>Bedrock WP-CLI</strong> — always <code>--path=web/wp</code>.</li></ul>
+<!-- /wp:list -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">What's next</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>The dev blog is live on the same platform stack as the Laravel app: hardened server, reusable deploy workflows, Ansible for the shell, GitHub Actions for code. Push to <code>master</code> in the Bedrock repo deploys theme and PHP changes; uploads and <code>.env</code> stay on the server.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p><strong>Next in the series:</strong> staging convention (<code>staging.*</code>), Terraform for Hetzner, or nginx provisioning for Laravel — same platform repo, different playbooks.</p>
+<!-- /wp:paragraph -->

@@ -2,11 +2,11 @@
 
 # Site identity
 bedrock_site_name: mydevsite
-bedrock_domain: wiltzsu.dev
+bedrock_domain: wiltsu.dev
 bedrock_domain_aliases:
   - www.wiltsu.dev
 
-# Paths
+# Paths — folder name can differ from domain; optional symlink: /var/www/wiltsu -> bedrock_deploy_path
 bedrock_deploy_path: /var/www/wiltzsu
 bedrock_deploy_user: william
 
@@ -20,7 +20,7 @@ bedrock_db_password: CHANGE_ME
 bedrock_db_host: "127.0.0.1"
 
 # WordPress URLs (used in .env template on first provision only)
-bedrock_wp_home: "https://wiltzsu.dev"
+bedrock_wp_home: "https://wiltsu.dev"
 bedrock_wp_env: production
 
 # Optional: clone repo on first provision (leave empty to deploy only via GitHub Actions)

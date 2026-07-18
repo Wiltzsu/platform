@@ -51,7 +51,9 @@ Order matters:
 2. Verify login works
 3. Run `bootstrap-server.yml` (disables root SSH, enables firewall, etc.)
 
-## Adding a new site (manual for now)
+## Adding a new site
+
+### Laravel (manual nginx for now)
 
 1. Prepare the app directory (see [setup-app-directory.sh](https://github.com/Wiltzsu/linux-server-utils/blob/master/web/setup-app-directory.sh)):
 
@@ -65,6 +67,31 @@ Order matters:
 5. Add [GitHub Actions deploy key secrets](#set-up-a-github-actions-deploy-key) to the app repo
 
 An Ansible `site-nginx` playbook is on the roadmap.
+
+### Bedrock WordPress (Ansible + reusable deploy)
+
+Production example: **wiltsu.dev** (`mydevsite`). Full checklist: [bedrock-wiltsu-deploy-plan.md](drafts/bedrock-wiltsu-deploy-plan.md).
+
+1. Copy and edit Bedrock vars:
+
+   ```bash
+   cp ansible/group_vars/site_bedrock.example.yml ansible/group_vars/site_bedrock.yml
+   # bedrock_domain: wiltsu.dev
+   # bedrock_deploy_path: /var/www/wiltzsu  (must match deploy.yml deploy_path)
+   ```
+
+2. Provision the shell:
+
+   ```bash
+   cd ansible
+   ansible-playbook -i inventory/hosts.yml playbooks/site-bedrock.yml -K
+   ```
+
+3. Add `deploy.yml` in the Bedrock repo → `reusable-deploy-bedrock.yml` (see `docs/drafts/mydevsite-deploy.yml.example`).
+
+4. After first deploy + DB import: `wp search-replace` with `--path=web/wp`, then `sudo certbot --nginx -d wiltsu.dev -d www.wiltsu.dev`.
+
+`bedrock_domain` must match the domain you registered. The folder name on disk (e.g. `/var/www/wiltzsu`) can differ — optional symlink for nginx: `ln -s /var/www/wiltzsu /var/www/wiltsu`.
 
 ## GitHub Actions secrets (per app repo)
 
