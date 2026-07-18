@@ -102,6 +102,25 @@ Cloudflare: use **DNS only** (grey cloud) on `@` and `www` for the first certbot
 
 ---
 
+## After go-live
+
+**Plugins (Composer)** — `web/app/plugins/*` is gitignored. Add wpackagist packages to `composer.json`; deploy runs `composer install --no-dev`. Update plugins via Composer locally, not wp-admin.
+
+**Umami** — set in server `.env` (not deployed):
+
+```env
+UMAMI_URL='https://analytics.wiltsu.dev'
+UMAMI_WEBSITE_ID='your-uuid'
+```
+
+Theme loads `inc/hooks/analytics.php` when the ID is set.
+
+**Content** — new posts in production wp-admin; code via GitHub Actions on `master`.
+
+**SEO (todo)** — fix WordPress site title (Settings → General), add SEO plugin via Composer, submit sitemap in Search Console.
+
+---
+
 ## Bedrock vs Laravel deploy
 
 | | Laravel (grapplingtracker) | Bedrock (mydevsite) |

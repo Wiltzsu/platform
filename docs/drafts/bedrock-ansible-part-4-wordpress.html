@@ -15,7 +15,7 @@
 <!-- /wp:heading -->
 
 <!-- wp:list -->
-<ul class="wp-block-list"><li>Thin <code>deploy.yml</code> in the Bedrock repo calling the platform reusable workflow</li><li>GitHub Actions secrets and first green deploy</li><li><code>composer install</code> on the server</li><li>Production <code>.env</code> salts</li><li>Local DB export, upload, import</li><li>Rsync <code>web/app/uploads/</code></li><li><code>wp search-replace</code> for production URLs</li><li>DNS and certbot (final go-live steps)</li></ul>
+<ul class="wp-block-list"><li>Thin <code>deploy.yml</code> in the Bedrock repo calling the platform reusable workflow</li><li>GitHub Actions secrets and first green deploy</li><li><code>composer install</code> on the server</li><li>Production <code>.env</code> salts</li><li>Local DB export, upload, import</li><li>Rsync <code>web/app/uploads/</code></li><li><code>wp search-replace</code> for production URLs</li><li>DNS, certbot, and Cloudflare</li><li>Post-launch fixes: Composer-managed plugins, Umami analytics, content workflow</li></ul>
 <!-- /wp:list -->
 
 <!-- wp:heading -->
@@ -188,7 +188,72 @@ www                      CNAME   site.example.com</code></pre>
 <!-- /wp:paragraph -->
 
 <!-- wp:list {"ordered":true} -->
-<ol class="wp-block-list"><li>Confirm <code>curl -I http://site.example.com</code> hits nginx (301 to HTTPS from WordPress is fine once URLs are updated).</li><li><code>sudo certbot --nginx -d site.example.com -d www.site.example.com</code></li><li><code>curl -I https://site.example.com</code> — expect <code>HTTP/2 200</code> without certificate errors.</li><li>Smoke test: home page, blog archive, wp-admin login, one post with media.</li></ol>
+<ol class="wp-block-list"><li>Confirm <code>curl -I http://site.example.com</code> hits nginx (301 to HTTPS from WordPress is fine once URLs are updated).</li><li><code>sudo certbot --nginx -d site.example.com -d www.site.example.com</code></li><li><code>curl -I https://site.example.com</code> — expect <code>HTTP/2 200</code> without certificate errors.</li><li>Re-enable Cloudflare proxy (orange cloud) on <code>@</code> and <code>www</code> if you disabled it for certbot.</li><li>Smoke test: home page, blog archive, wp-admin login, one post with media.</li></ol>
+<!-- /wp:list -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Plugins belong in Composer</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>Bedrock gitignores <code>web/app/plugins/*</code>. Plugins I had installed locally via wp-admin never reached production — the DB still listed them as active, but the files were missing.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>Fix: add wpackagist packages to <code>composer.json</code>, commit <code>composer.lock</code>, push to <code>master</code>. Deploy runs <code>composer install --no-dev</code>, which installs production plugins on the server.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:code -->
+<pre class="wp-block-code"><code lang="json" class="language-json">"repositories": [
+  { "type": "composer", "url": "https://wpackagist.org" }
+],
+"require": {
+  "wpackagist-plugin/post-views-counter": "^1.7"
+},
+"require-dev": {
+  "wpackagist-plugin/query-monitor": "^4.0"
+}</code></pre>
+<!-- /wp:code -->
+
+<!-- wp:paragraph -->
+<p>Update plugins locally with <code>composer update wpackagist-plugin/…</code> — not wp-admin or <code>update-core.php</code>. Query Monitor stays in <code>require-dev</code> so it does not ship to production.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Umami analytics</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>Umami runs on a separate host at <code>analytics.example.com</code>. The theme loads the script only when <code>UMAMI_WEBSITE_ID</code> is set in Bedrock <code>.env</code> (deploy never overwrites <code>.env</code>, so add these on the server manually):</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:code -->
+<pre class="wp-block-code"><code lang="bash" class="language-bash">UMAMI_URL='https://analytics.example.com'
+UMAMI_WEBSITE_ID='your-website-uuid'</code></pre>
+<!-- /wp:code -->
+
+<!-- wp:paragraph -->
+<p>Theme hook: <code>inc/hooks/analytics.php</code> enqueues <code>script.js</code> with <code>defer</code> and <code>data-website-id</code>. No tracking script when the env var is empty — useful for local dev without analytics.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Content after go-live</h2>
+<!-- /wp:heading -->
+
+<!-- wp:list -->
+<ul class="wp-block-list"><li><strong>New posts</strong> — write and publish in production wp-admin. Code deploys via Git; post content lives in MySQL on the server.</li><li><strong>Platform series drafts</strong> — still drafted as HTML in the <code>platform</code> repo, then pasted or published on the live site.</li><li><strong>One-time DB import</strong> — only for the initial migration, not for routine posting.</li><li><strong>Site title in WordPress</strong> — after a domain typo in Ansible, fix <strong>Settings → General</strong> so search result titles match the registered domain.</li></ul>
+<!-- /wp:list -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">SEO (still on the list)</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>Technical basics are fine: HTTPS, canonical URLs, WordPress sitemap at <code>/wp-sitemap.xml</code>, indexable on production. Missing the usual blog SEO layer:</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:list -->
+<ul class="wp-block-list"><li>Meta descriptions and Open Graph tags — add an SEO plugin via Composer (Rank Math or The SEO Framework) or custom theme hooks</li><li>Google Search Console — verify the domain and submit the sitemap</li><li>Featured images + alt text on posts that matter for sharing</li></ul>
 <!-- /wp:list -->
 
 <!-- wp:heading -->
@@ -196,7 +261,7 @@ www                      CNAME   site.example.com</code></pre>
 <!-- /wp:heading -->
 
 <!-- wp:table -->
-<figure class="wp-block-table"><table class="has-fixed-layout"><thead><tr><th>Step</th><th>Status</th></tr></thead><tbody><tr><td><code>deploy.yml</code> + GitHub secrets</td><td>Done</td></tr><tr><td>First green Actions deploy</td><td>Done</td></tr><tr><td><code>composer install</code> on server</td><td>Done</td></tr><tr><td>Production salts in <code>.env</code></td><td>Done</td></tr><tr><td>Uploads rsync</td><td>Done</td></tr><tr><td>DB export, copy, import</td><td>Done</td></tr><tr><td><code>search-replace</code> (<code>--path=web/wp</code>)</td><td>Done</td></tr><tr><td>DNS + certbot</td><td>Done — live at <code>wiltsu.dev</code></td></tr><tr><td>Browser smoke test</td><td>Done</td></tr></tbody></table></figure>
+<figure class="wp-block-table"><table class="has-fixed-layout"><thead><tr><th>Step</th><th>Status</th></tr></thead><tbody><tr><td><code>deploy.yml</code> + GitHub secrets</td><td>Done</td></tr><tr><td>First green Actions deploy</td><td>Done</td></tr><tr><td><code>composer install</code> on server</td><td>Done</td></tr><tr><td>Production salts in <code>.env</code></td><td>Done</td></tr><tr><td>Uploads rsync</td><td>Done</td></tr><tr><td>DB export, copy, import</td><td>Done</td></tr><tr><td><code>search-replace</code> (<code>--path=web/wp</code>)</td><td>Done</td></tr><tr><td>DNS + certbot</td><td>Done — live at <code>wiltsu.dev</code></td></tr><tr><td>Cloudflare proxy re-enabled</td><td>Done</td></tr><tr><td>Browser smoke test</td><td>Done</td></tr><tr><td>Plugins via Composer</td><td>Done</td></tr><tr><td>Umami in <code>.env</code> + theme hook</td><td>Done</td></tr><tr><td>SEO plugin + Search Console</td><td>Later</td></tr></tbody></table></figure>
 <!-- /wp:table -->
 
 <!-- wp:heading -->
@@ -204,7 +269,7 @@ www                      CNAME   site.example.com</code></pre>
 <!-- /wp:heading -->
 
 <!-- wp:list -->
-<ul class="wp-block-list"><li><strong>Push to <code>master</code></strong> — the deploy workflow does not run on <code>development</code> unless you change <code>on.push.branches</code>.</li><li><strong><code>mysqldump</code> direction</strong> — export local, import server. Do not dump the empty production DB.</li><li><strong><code>HOST</code> is the server IP</strong> — origin server for SSH, not a CDN hostname.</li><li><strong><code>SSH_KEY</code> is the CI deploy key</strong> — not the key you use from your laptop.</li><li><strong>Table prefix</strong> — if not <code>wp_</code>, adjust SQL and WP-CLI commands accordingly.</li><li><strong>Registered domain vs Ansible typo</strong> — I configured the wrong spelling in Ansible once. DNS records for the typo inside the real zone became a fourth-level hostname, not a public site. Match <code>bedrock_domain</code> to the domain you own before certbot.</li><li><strong>Deploy path vs nginx <code>root</code></strong> — GitHub Actions can deploy to <code>/var/www/wiltzsu</code> while nginx serves <code>/var/www/wiltsu/web</code> via symlink; only the paths in config need to exist.</li><li><strong>Bedrock WP-CLI</strong> — always <code>--path=web/wp</code>.</li></ul>
+<ul class="wp-block-list"><li><strong>Push to <code>master</code></strong> — the deploy workflow does not run on <code>development</code> unless you change <code>on.push.branches</code>.</li><li><strong><code>mysqldump</code> direction</strong> — export local, import server. Do not dump the empty production DB.</li><li><strong><code>HOST</code> is the server IP</strong> — origin server for SSH, not a CDN hostname.</li><li><strong><code>SSH_KEY</code> is the CI deploy key</strong> — not the key you use from your laptop.</li><li><strong>Table prefix</strong> — if not <code>wp_</code>, adjust SQL and WP-CLI commands accordingly.</li><li><strong>Registered domain vs Ansible typo</strong> — I configured the wrong spelling in Ansible once. DNS records for the typo inside the real zone became a fourth-level hostname, not a public site. Match <code>bedrock_domain</code> to the domain you own before certbot.</li><li><strong>Deploy path vs nginx <code>root</code></strong> — GitHub Actions can deploy to <code>/var/www/wiltzsu</code> while nginx serves <code>/var/www/wiltsu/web</code> via symlink; only the paths in config need to exist.</li><li><strong>Bedrock WP-CLI</strong> — always <code>--path=web/wp</code>.</li><li><strong>Plugins are gitignored</strong> — wp-admin installs do not deploy; use wpackagist in <code>composer.json</code>.</li><li><strong><code>.env</code> on the server</strong> — Umami keys and other secrets are manual on prod; deploy excludes <code>.env</code>.</li></ul>
 <!-- /wp:list -->
 
 <!-- wp:heading -->
@@ -212,9 +277,9 @@ www                      CNAME   site.example.com</code></pre>
 <!-- /wp:heading -->
 
 <!-- wp:paragraph -->
-<p>The dev blog is live on the same platform stack as the Laravel app: hardened server, reusable deploy workflows, Ansible for the shell, GitHub Actions for code. Push to <code>master</code> in the Bedrock repo deploys theme and PHP changes; uploads and <code>.env</code> stay on the server.</p>
+<p>The dev blog is live on the same platform stack as the Laravel app: hardened server, reusable deploy workflows, Ansible for the shell, GitHub Actions for code. Push to <code>master</code> in the Bedrock repo deploys theme and PHP changes; uploads, <code>.env</code>, and post content stay on the server.</p>
 <!-- /wp:paragraph -->
 
 <!-- wp:paragraph -->
-<p><strong>Next in the series:</strong> staging convention (<code>staging.*</code>), Terraform for Hetzner, or nginx provisioning for Laravel — same platform repo, different playbooks.</p>
+<p><strong>Still todo:</strong> SEO plugin, Search Console, and fixing the WordPress site title after the domain typo. <strong>Next in the series:</strong> staging convention (<code>staging.*</code>), Terraform for Hetzner, or nginx provisioning for Laravel.</p>
 <!-- /wp:paragraph -->
