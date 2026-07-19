@@ -8,9 +8,6 @@ server {
     root {{ bedrock_deploy_path }}/web;
     index index.php index.html;
 
-    access_log /var/log/nginx/{{ bedrock_site_name }}_access.log;
-    error_log /var/log/nginx/{{ bedrock_site_name }}_error.log;
-
     # Bedrock: block access to above web root
     location ~ /\.env {
         deny all;
