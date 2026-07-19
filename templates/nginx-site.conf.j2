@@ -8,9 +8,6 @@ server {
     root {{ site_root }}/public;
     index index.php index.html;
 
-    access_log /var/log/nginx/{{ site_name }}_access.log;
-    error_log /var/log/nginx/{{ site_name }}_error.log;
-
     location / {
         try_files $uri $uri/ /index.php?$query_string;
     }
