@@ -34,8 +34,12 @@
 <h2 class="wp-block-heading">Prerequisites</h2>
 <!-- /wp:heading -->
 
+<!-- wp:paragraph -->
+<p>Before you run the playbook:</p>
+<!-- /wp:paragraph -->
+
 <!-- wp:list -->
-<ul class="wp-block-list"><li>Server already hardened (<code>bootstrap-server.yml</code> or equivalent checklist).</li><li>Deploy user <code>user</code> with sudo, <code>www-data</code> group, and GitHub Actions deploy key in <code>authorized_keys</code>.</li><li>MySQL running on <code>127.0.0.1</code>.</li><li>DNS <code>A</code> record for the site (and <code>www</code>) pointing at the server — needed before certbot, not necessarily before Ansible.</li><li><code>ansible-galaxy collection install -r requirements.yml</code> (includes <code>community.mysql</code>).</li><li><strong>Inventory file</strong> — copy <code>inventory/hosts.example.yml</code> to <code>hosts.yml</code> (gitignored). Use your SSH config alias or explicit key path — bare <code>ssh user@ip</code> fails if your key is not the default.</li></ul>
+<ul class="wp-block-list"><li>The VPS is already locked down (I did this manually when the Laravel app went live; <code>bootstrap-server.yml</code> does the same job on a fresh box).</li><li>A deploy user exists with sudo, <code>www-data</code>, and the GitHub Actions public key in <code>authorized_keys</code>.</li><li>MySQL is installed and only listening on <code>127.0.0.1</code>.</li><li>DNS for the site (and <code>www</code>) can wait until certbot — not required for Ansible.</li><li>Run <code>ansible-galaxy collection install -r requirements.yml</code> once (needs <code>community.mysql</code>).</li><li>Copy <code>inventory/hosts.example.yml</code> to <code>hosts.yml</code> and fill in your host. That file stays local (gitignored). If SSH only works via a config alias or a non-default key, put that in inventory — plain <code>user@ip</code> often fails for Ansible even when <code>ssh myalias</code> works from your terminal.</li></ul>
 <!-- /wp:list -->
 
 <!-- wp:heading -->
