@@ -1,6 +1,6 @@
 ---
 # Superseded by site-bedrock.yml for wiltsu.dev / Bedrock sites.
-# See docs/drafts/bedrock-wiltsu-deploy-plan.md
+# See docs/getting-started.md
 
 - name: Configure nginx site
   hosts: all

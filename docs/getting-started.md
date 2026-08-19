@@ -70,7 +70,7 @@ An Ansible `site-nginx` playbook is on the roadmap.
 
 ### Bedrock WordPress (Ansible + reusable deploy)
 
-Production example: **wiltsu.dev** (`mydevsite`). Full checklist: [bedrock-wiltsu-deploy-plan.md](drafts/bedrock-wiltsu-deploy-plan.md).
+Production example: **wiltsu.dev** (`mydevsite`).
 
 1. Copy and edit Bedrock vars:
 
@@ -87,7 +87,19 @@ Production example: **wiltsu.dev** (`mydevsite`). Full checklist: [bedrock-wilts
    ansible-playbook -i inventory/hosts.yml playbooks/site-bedrock.yml -K
    ```
 
-3. Add `deploy.yml` in the Bedrock repo → `reusable-deploy-bedrock.yml` (see `docs/drafts/mydevsite-deploy.yml.example`).
+3. Add `deploy.yml` in the Bedrock repo:
+
+   ```yaml
+   jobs:
+     deploy:
+       uses: Wiltzsu/platform/.github/workflows/reusable-deploy-bedrock.yml@master
+       with:
+         deploy_path: /var/www/wiltzsu   # must match bedrock_deploy_path
+       secrets:
+         SSH_KEY: ${{ secrets.SSH_KEY }}
+         HOST: ${{ secrets.HOST }}
+         USER: ${{ secrets.USER }}
+   ```
 
 4. After first deploy + DB import: `wp search-replace` with `--path=web/wp`, then `sudo certbot --nginx -d wiltsu.dev -d www.wiltsu.dev`.
 

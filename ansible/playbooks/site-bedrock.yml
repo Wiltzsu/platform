@@ -21,7 +21,7 @@
       ansible.builtin.debug:
         msg: >-
           This playbook is a draft. Confirm server hardening before running.
-          Use --check first. See docs/drafts/bedrock-wiltsu-deploy-plan.md
+          Use --check first. See docs/getting-started.md
 
     - name: Require site_bedrock variables file
       ansible.builtin.stat:
