@@ -1,0 +1,3 @@
+---
+platform_ssh_allowed_users: []
+platform_mysql_bind_localhost: true
