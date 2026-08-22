@@ -24,10 +24,10 @@ ansible-galaxy collection install -r requirements.yml
 
    ```bash
    cp ansible/inventory/hosts.example.yml ansible/inventory/hosts.yml
-   cp ansible/group_vars/all.example.yml ansible/group_vars/all.yml
+   cp ansible/inventory/group_vars/all.example.yml ansible/inventory/group_vars/all.yml
    ```
 
-2. Set variables in `all.yml`:
+2. Set variables in `inventory/group_vars/all.yml`:
    - `platform_admin_user` — sudo user that will SSH in (must already exist on first run if not using root-only bootstrap)
    - `platform_ssh_allowed_users` — usernames allowed in `sshd_config`
    - `platform_ufw_allow_web` — open 80/443 if this server serves HTTP(S)
@@ -75,7 +75,7 @@ Production example: **wiltsu.dev** (`mydevsite`).
 1. Copy and edit Bedrock vars:
 
    ```bash
-   cp ansible/group_vars/site_bedrock.example.yml ansible/group_vars/site_bedrock.yml
+   cp ansible/inventory/group_vars/site_bedrock.example.yml ansible/inventory/group_vars/site_bedrock.yml
    # bedrock_domain: wiltsu.dev
    # bedrock_deploy_path: /var/www/wiltzsu  (must match deploy.yml deploy_path)
    ```

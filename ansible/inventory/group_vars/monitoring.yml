@@ -1,0 +1,2 @@
+# williamhaven — Umami + analytics vhosts need 80/443
+platform_ufw_allow_web: true
