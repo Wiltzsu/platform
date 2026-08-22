@@ -14,7 +14,7 @@
   hosts: all
   gather_facts: true
   vars_files:
-    - ../group_vars/site_bedrock.yml
+    - ../inventory/group_vars/site_bedrock.yml
 
   pre_tasks:
     - name: DRAFT warning
@@ -25,14 +25,14 @@
 
     - name: Require site_bedrock variables file
       ansible.builtin.stat:
-        path: "{{ playbook_dir }}/../group_vars/site_bedrock.yml"
+        path: "{{ playbook_dir }}/../inventory/group_vars/site_bedrock.yml"
       register: bedrock_vars_file
       delegate_to: localhost
       become: false
 
     - name: Fail if site_bedrock.yml is missing
       ansible.builtin.fail:
-        msg: "Copy ansible/group_vars/site_bedrock.example.yml to site_bedrock.yml and edit it."
+        msg: "Copy ansible/inventory/group_vars/site_bedrock.example.yml to site_bedrock.yml and edit it."
       when: not bedrock_vars_file.stat.exists
       delegate_to: localhost
       become: false
