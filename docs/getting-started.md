@@ -1,5 +1,7 @@
 # Getting started
 
+**Recommended path:** Bootstrap a VPS → provision a **Bedrock** site with `site-bedrock.yml` → wire `reusable-deploy-bedrock.yml` (full path below). **Laravel** apps use the reusable deploy workflow; nginx vhost is manual until `site-nginx.yml` is implemented.
+
 ## Prerequisites
 
 - Ansible 2.14+ on your laptop
