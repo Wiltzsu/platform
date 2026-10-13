@@ -9,7 +9,7 @@ Companion repo for day-to-day server scripts: [`linux-server-utils`](https://git
 ## What this is
 
 - **Bootstrap / hardening** for fresh VPS hosts (`ansible/playbooks/bootstrap-server.yml`)
-- **Bedrock WordPress** site shell + [`reusable-deploy-bedrock.yml`](.github/workflows/reusable-deploy-bedrock.yml) (production: [wiltsu.dev](https://wiltsu.dev))
+- **Bedrock WordPress** site shell + [`reusable-deploy-bedrock.yml`](.github/workflows/reusable-deploy-bedrock.yml)
 - **Laravel deploy** via [`reusable-deploy-laravel.yml`](.github/workflows/reusable-deploy-laravel.yml) (nginx vhost setup is still manual; see getting started)
 - **Multi-host inventory** pattern (app server + monitoring server)
 - **CI-friendly deploy keys** documented in getting started
