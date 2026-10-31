@@ -1,0 +1,65 @@
+---
+- name: Install packages for linux-server-utils scripts
+  ansible.builtin.apt:
+    name: "{{ linux_server_utils_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Ensure parent directory for clone exists
+  ansible.builtin.file:
+    path: "{{ linux_server_utils_path | dirname }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Ensure deploy user owns repo directory
+  ansible.builtin.file:
+    path: "{{ linux_server_utils_path }}"
+    state: directory
+    owner: "{{ linux_server_utils_owner }}"
+    group: "{{ linux_server_utils_group }}"
+    mode: "0755"
+    recurse: true
+
+- name: Clone or update linux-server-utils
+  ansible.builtin.git:
+    repo: "{{ linux_server_utils_repo }}"
+    dest: "{{ linux_server_utils_path }}"
+    version: "{{ linux_server_utils_version }}"
+    accept_hostkey: true
+    key_file: "{{ linux_server_utils_deploy_key }}"
+    force: true
+  become: true
+  become_user: "{{ linux_server_utils_owner }}"
+
+- name: Install vuln-watch config from example when missing
+  ansible.builtin.copy:
+    src: "{{ linux_server_utils_path }}/monitoring/ubuntu-vuln-watch/config.env.example"
+    dest: "{{ linux_server_utils_path }}/monitoring/ubuntu-vuln-watch/config.env"
+    remote_src: true
+    owner: "{{ linux_server_utils_owner }}"
+    group: "{{ linux_server_utils_group }}"
+    mode: "0600"
+    force: false
+
+- name: Install cron jobs from inventory
+  ansible.builtin.cron:
+    name: "{{ item.name }}"
+    minute: "{{ item.minute | default('*') }}"
+    hour: "{{ item.hour | default('*') }}"
+    day: "{{ item.day | default('*') }}"
+    month: "{{ item.month | default('*') }}"
+    weekday: "{{ item.weekday | default('*') }}"
+    user: "{{ item.user | default('root') }}"
+    job: "{{ item.job }}"
+    state: present
+  loop: "{{ linux_server_utils_cron_jobs }}"
+  when: linux_server_utils_cron_jobs | length > 0
+
+- name: Remove legacy william-user vuln-watch cron
+  ansible.builtin.cron:
+    name: ubuntu-vuln-watch
+    user: "{{ linux_server_utils_owner }}"
+    state: absent

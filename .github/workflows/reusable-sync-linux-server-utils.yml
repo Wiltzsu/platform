@@ -1,0 +1,61 @@
+name: Reusable sync linux-server-utils
+
+on:
+  workflow_call:
+    secrets:
+      SSH_KEY:
+        required: true
+      HOST:
+        required: true
+      USER:
+        required: true
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: sync-linux-server-utils-${{ secrets.HOST }}
+      cancel-in-progress: false
+
+    steps:
+      - name: Pull linux-server-utils on server
+        env:
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+          HOST: ${{ secrets.HOST }}
+          USER: ${{ secrets.USER }}
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${SSH_KEY//[[:space:]]/}" ]]; then
+            echo "Error: SSH_KEY secret is empty."
+            exit 1
+          fi
+
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+
+          if ! ssh-keygen -y -f ~/.ssh/deploy_key >/dev/null 2>&1; then
+            echo "Error: SSH_KEY is not a valid unencrypted private key."
+            exit 1
+          fi
+
+          ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+          REMOTE="${USER}@${HOST}"
+          SSH_OPTS=(-i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o BatchMode=yes -o ConnectTimeout=30)
+
+          ssh "${SSH_OPTS[@]}" "$REMOTE" 'set -euo pipefail
+          REPO=/usr/local/src/linux-server-utils
+          KEY="$HOME/.ssh/linux_server_utils_ro"
+          if [[ ! -f "$KEY" ]]; then
+            echo "Missing $KEY — add read-only deploy key and run site-ops.yml on the host."
+            exit 1
+          fi
+          export GIT_SSH_COMMAND="ssh -i $KEY -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
+          git -C "$REPO" fetch origin master
+          git -C "$REPO" reset --hard origin/master
+          git -C "$REPO" log -1 --oneline
+          python3 "$REPO/monitoring/ubuntu-vuln-watch/build_email.py" --help >/dev/null 2>&1 || true
+          echo "Sync OK"
+          '
