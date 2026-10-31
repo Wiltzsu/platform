@@ -34,6 +34,17 @@
   become: true
   become_user: "{{ linux_server_utils_owner }}"
 
+- name: Migrate vuln-watch config from legacy install path when present
+  ansible.builtin.copy:
+    src: "/home/{{ linux_server_utils_owner }}/scripts/ubuntu-vuln-watch/config.env"
+    dest: "{{ linux_server_utils_path }}/monitoring/ubuntu-vuln-watch/config.env"
+    remote_src: true
+    owner: "{{ linux_server_utils_owner }}"
+    group: "{{ linux_server_utils_group }}"
+    mode: "0600"
+    force: false
+  failed_when: false
+
 - name: Install vuln-watch config from example when missing
   ansible.builtin.copy:
     src: "{{ linux_server_utils_path }}/monitoring/ubuntu-vuln-watch/config.env.example"
@@ -63,3 +74,21 @@
     name: ubuntu-vuln-watch
     user: "{{ linux_server_utils_owner }}"
     state: absent
+
+- name: Remove legacy root cron entries for old script paths
+  ansible.builtin.shell: |
+    set -euo pipefail
+    legacy='/home/{{ linux_server_utils_owner }}/scripts/ubuntu-vuln-watch'
+    if ! crontab -l 2>/dev/null | grep -q "$legacy"; then
+      exit 0
+    fi
+    tmp="$(mktemp)"
+    crontab -l | grep -v "$legacy" >"$tmp"
+    crontab "$tmp"
+    rm -f "$tmp"
+    echo changed
+  args:
+    executable: /bin/bash
+  become: true
+  register: legacy_root_cron
+  changed_when: legacy_root_cron.stdout is search('changed')
