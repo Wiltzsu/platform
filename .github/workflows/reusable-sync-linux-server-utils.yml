@@ -1,3 +1,4 @@
+# Called from linux-server-utils sync-servers.yml (not run on push to this repo).
 name: Reusable sync linux-server-utils
 
 on:
