@@ -11,6 +11,8 @@ Companion repo for day-to-day server scripts: [`linux-server-utils`](https://git
 - **Bootstrap / hardening** for fresh VPS hosts (`ansible/playbooks/bootstrap-server.yml`)
 - **Bedrock WordPress** site shell + [`reusable-deploy-bedrock.yml`](.github/workflows/reusable-deploy-bedrock.yml)
 - **Laravel deploy** via [`reusable-deploy-laravel.yml`](.github/workflows/reusable-deploy-laravel.yml) (nginx vhost setup is still manual; see getting started)
+- **Ops scripts on hosts** via [`site-ops.yml`](ansible/playbooks/site-ops.yml) (clone [`linux-server-utils`](https://github.com/Wiltzsu/linux-server-utils), cron, local config templates)
+- **Utils repo auto-sync** via [`reusable-sync-linux-server-utils.yml`](.github/workflows/reusable-sync-linux-server-utils.yml) (called from linux-server-utils on push; see [`docs/linux-server-utils-sync.md`](docs/linux-server-utils-sync.md))
 - **Multi-host inventory** pattern (app server + monitoring server)
 - **CI-friendly deploy keys** documented in getting started
 
@@ -26,8 +28,10 @@ Companion repo for day-to-day server scripts: [`linux-server-utils`](https://git
 | Path | Purpose |
 |------|---------|
 | `ansible/` | Playbooks, roles, inventory examples |
-| `.github/workflows/` | Reusable deploy workflows for app repos |
+| `.github/workflows/` | Reusable workflows (app deploy + linux-server-utils sync) |
 | `docs/getting-started.md` | Operator runbook for this lab |
+| `docs/linux-server-utils-sync.md` | Push-to-server sync for linux-server-utils |
+| `docs/testing-changes.md` | Staging vs ephemeral Hetzner VPS for playbook tests |
 
 ## License
 
