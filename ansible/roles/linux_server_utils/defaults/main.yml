@@ -1,0 +1,13 @@
+---
+linux_server_utils_repo: "git@github.com:Wiltzsu/linux-server-utils.git"
+linux_server_utils_version: master
+linux_server_utils_path: /usr/local/src/linux-server-utils
+linux_server_utils_owner: william
+linux_server_utils_group: william
+linux_server_utils_deploy_key: "/home/william/.ssh/linux_server_utils_ro"
+
+linux_server_utils_packages:
+  - git
+  - python3
+
+linux_server_utils_cron_jobs: []
