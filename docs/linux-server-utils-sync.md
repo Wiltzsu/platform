@@ -10,10 +10,16 @@ Scripts live in [linux-server-utils](https://github.com/Wiltzsu/linux-server-uti
    ```bash
    cd ~/platform/ansible
    ansible-playbook -i inventory/hosts.yml playbooks/site-ops.yml --limit apps
+   # monitoring (monitoring-host):
+   ansible-playbook -i inventory/hosts.yml playbooks/site-ops.yml --limit monitoring
    ```
 
 3. Edit secrets on disk once (not in git), e.g. vuln-watch `config.env` under the clone path.
-4. Repo secrets on **linux-server-utils**: `SSH_KEY`, `HOST`, `USER` (same deploy key pattern as app deploys).
+4. **GitHub Actions SSH:** add the same app deploy public key (e.g. `github-actions-grapplingtracker`) to `william`’s `~/.ssh/authorized_keys` on the host.
+5. Repo secrets on **linux-server-utils**:
+   - `SSH_KEY`, `USER` — shared (CI private key + login user, same as app deploys)
+   - `HOST` — apps-host
+   - `HOST_2` — monitoring host (`monitoring-host`)
 
 ## Ongoing
 

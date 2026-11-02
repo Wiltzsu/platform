@@ -1,2 +1,11 @@
 # monitoring-host — Umami + analytics vhosts need 80/443
 platform_ufw_allow_web: true
+
+linux_server_utils_cron_jobs:
+  - name: ubuntu-vuln-watch
+    minute: "45"
+    hour: "7"
+    user: root
+    job: >-
+      {{ linux_server_utils_path }}/monitoring/ubuntu-vuln-watch/scan.sh
+      >>{{ linux_server_utils_path }}/monitoring/ubuntu-vuln-watch/scan.log 2>&1
