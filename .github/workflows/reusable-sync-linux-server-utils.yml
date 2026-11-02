@@ -5,7 +5,7 @@ on:
   workflow_call:
     inputs:
       sync_label:
-        description: Short host id for Actions concurrency (per sync target)
+        description: Short id for Actions concurrency (per target host)
         required: true
         type: string
     secrets:
