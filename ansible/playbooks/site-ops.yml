@@ -2,6 +2,7 @@
 # Install / refresh linux-server-utils clone, cron, and local config templates.
 #
 #   ansible-playbook -i inventory/hosts.yml playbooks/site-ops.yml --limit apps
+#   ansible-playbook -i inventory/hosts.yml playbooks/site-ops.yml --limit monitoring
 
 - name: Ops tooling from linux-server-utils
   hosts: all

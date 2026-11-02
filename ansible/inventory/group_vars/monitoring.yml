@@ -1,4 +1,4 @@
-# Monitoring group — Umami + analytics vhosts need 80/443
+# Monitoring group — observability stack (HTTP/HTTPS)
 platform_ufw_allow_web: true
 
 linux_server_utils_cron_jobs:
