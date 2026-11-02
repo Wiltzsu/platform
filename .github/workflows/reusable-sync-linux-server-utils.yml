@@ -3,6 +3,11 @@ name: Reusable sync linux-server-utils
 
 on:
   workflow_call:
+    inputs:
+      sync_label:
+        description: Short host id for Actions concurrency (per sync target)
+        required: true
+        type: string
     secrets:
       SSH_KEY:
         required: true
@@ -15,7 +20,7 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     concurrency:
-      group: sync-linux-server-utils-${{ secrets.HOST }}
+      group: sync-linux-server-utils-${{ inputs.sync_label }}
       cancel-in-progress: false
 
     steps:
