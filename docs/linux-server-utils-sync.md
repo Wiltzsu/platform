@@ -19,7 +19,7 @@ Scripts live in [linux-server-utils](https://github.com/Wiltzsu/linux-server-uti
 5. Repo secrets on **linux-server-utils**:
    - `SSH_KEY`, `USER` — shared (CI private key + login user, same as app deploys)
    - `HOST` — apps-host
-   - `HOST_2` — monitoring host (`monitoring-host`)
+   - `HOST_2` — monitoring host **IP or resolvable DNS** (e.g. `REDACTED`; `monitoring-host` is SSH config only, not public DNS)
 
 ## Ongoing
 
