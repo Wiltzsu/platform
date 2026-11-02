@@ -1,4 +1,4 @@
-# apps-host — public sites
+# Apps group — public sites
 platform_ufw_allow_web: true
 
 linux_server_utils_cron_jobs:
