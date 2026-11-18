@@ -22,12 +22,14 @@
         update_cache: true
         cache_valid_time: 3600
 
+  # Tagged so one role can be applied to a live host on its own, e.g.
+  #   ansible-playbook playbooks/bootstrap-server.yml -l <host> --tags fail2ban --check --diff
   roles:
-    - role: common
-    - role: hardening
-    - role: ufw
-    - role: fail2ban
-    - role: unattended_upgrades
+    - { role: common, tags: [common] }
+    - { role: hardening, tags: [hardening] }
+    - { role: ufw, tags: [ufw] }
+    - { role: fail2ban, tags: [fail2ban] }
+    - { role: unattended_upgrades, tags: [unattended_upgrades] }
 
   post_tasks:
     - name: Remind operator to test SSH in a new session
