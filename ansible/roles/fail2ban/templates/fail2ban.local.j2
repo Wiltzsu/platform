@@ -1,0 +1,5 @@
+# Managed by Ansible (platform/roles/fail2ban)
+[DEFAULT]
+# Keep ban history at least as long as the longest ban (recidive), so
+# bans survive a fail2ban restart.
+dbpurgeage = {{ platform_fail2ban_recidive_bantime }}
