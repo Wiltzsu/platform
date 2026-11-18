@@ -1,4 +1,13 @@
 ---
+- name: Blacklist unused SCTP kernel module (attack-surface reduction; originally CVE-2026-64564, fixed in 6.8.0-147)
+  ansible.builtin.copy:
+    dest: /etc/modprobe.d/disable-sctp.conf
+    content: |
+      install sctp /bin/false
+    owner: root
+    group: root
+    mode: "0644"
+
 - name: Ensure sshd hardening options are set
   ansible.builtin.lineinfile:
     path: /etc/ssh/sshd_config
