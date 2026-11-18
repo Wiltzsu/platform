@@ -1,0 +1,29 @@
+---
+# Extra IPs/CIDRs fail2ban must never ban (e.g. your home IP).
+platform_fail2ban_ignoreip: []
+
+# SSH jail
+platform_fail2ban_sshd_maxretry: 3
+platform_fail2ban_sshd_bantime: 1h
+platform_fail2ban_sshd_findtime: 10m
+
+# nginx jails (WIL-16). Bans go into /etc/nginx/f2b/<jail>.conf as
+# `deny <ip>;`, included in http {} via /etc/nginx/conf.d/fail2ban.conf.
+# Requires nginx to log the real client IP (cloudflare-realip.conf).
+platform_fail2ban_nginx_enabled: false
+platform_fail2ban_nginx_access_log: /var/log/nginx/access.log
+
+# Known-bad paths (.env, .git, root wp-login.php, batch/v1, ...)
+platform_fail2ban_nginx_probe_maxretry: 3
+platform_fail2ban_nginx_probe_findtime: 10m
+platform_fail2ban_nginx_probe_bantime: 1d
+
+# Any 4xx; only high volume counts
+platform_fail2ban_nginx_flood_maxretry: 60
+platform_fail2ban_nginx_flood_findtime: 1m
+platform_fail2ban_nginx_flood_bantime: 1d
+
+# Repeat offenders across all jails
+platform_fail2ban_recidive_maxretry: 3
+platform_fail2ban_recidive_findtime: 1d
+platform_fail2ban_recidive_bantime: 1w

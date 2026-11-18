@@ -1,3 +1,4 @@
+# Managed by Ansible (platform/roles/fail2ban)
 [DEFAULT]
 bantime = 1d
 findtime = 10m
@@ -5,6 +6,8 @@ maxretry = 3
 backend = auto
 banaction = iptables-multiport
 banaction_allports = iptables-allports
+ignoreip = 127.0.0.1/8 ::1{% for ip in platform_fail2ban_ignoreip %} {{ ip }}{% endfor %}
+
 
 [sshd]
 port = 22
@@ -12,3 +15,42 @@ enabled = true
 maxretry = {{ platform_fail2ban_sshd_maxretry }}
 bantime = {{ platform_fail2ban_sshd_bantime }}
 findtime = {{ platform_fail2ban_sshd_findtime }}
+{% if platform_fail2ban_nginx_enabled %}
+
+# --- nginx jails (WIL-16) -------------------------------------------------
+# Banned in nginx (action nginx-deny), not the firewall: behind Cloudflare
+# the firewall only sees Cloudflare IPs. See action.d/nginx-deny.conf.
+
+[nginx-probe]
+enabled = true
+port = http,https
+filter = nginx-probe
+logpath = {{ platform_fail2ban_nginx_access_log }}
+action = nginx-deny
+maxretry = {{ platform_fail2ban_nginx_probe_maxretry }}
+findtime = {{ platform_fail2ban_nginx_probe_findtime }}
+bantime = {{ platform_fail2ban_nginx_probe_bantime }}
+
+[nginx-4xx-flood]
+enabled = true
+port = http,https
+filter = nginx-4xx-flood
+logpath = {{ platform_fail2ban_nginx_access_log }}
+action = nginx-deny
+maxretry = {{ platform_fail2ban_nginx_flood_maxretry }}
+findtime = {{ platform_fail2ban_nginx_flood_findtime }}
+bantime = {{ platform_fail2ban_nginx_flood_bantime }}
+{% endif %}
+
+# --- recidive ---------------------------------------------------------------
+# Repeat offenders from any jail get a long ban, in nginx (proxied sites)
+# and in the firewall (SSH and direct connections).
+
+[recidive]
+enabled = true
+logpath = /var/log/fail2ban.log
+action = {% if platform_fail2ban_nginx_enabled %}nginx-deny
+         {% endif %}%(banaction_allports)s[name=recidive]
+maxretry = {{ platform_fail2ban_recidive_maxretry }}
+findtime = {{ platform_fail2ban_recidive_findtime }}
+bantime = {{ platform_fail2ban_recidive_bantime }}

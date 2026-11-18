@@ -1,4 +1,59 @@
 ---
+- name: Deploy fail2ban.local
+  ansible.builtin.template:
+    src: fail2ban.local.j2
+    dest: /etc/fail2ban/fail2ban.local
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart fail2ban
+
+- name: Deploy nginx fail2ban filters
+  ansible.builtin.copy:
+    src: "filter.d/{{ item }}.conf"
+    dest: "/etc/fail2ban/filter.d/{{ item }}.conf"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - nginx-probe
+    - nginx-4xx-flood
+  when: platform_fail2ban_nginx_enabled
+  notify: Restart fail2ban
+
+- name: Deploy nginx-deny action
+  ansible.builtin.copy:
+    src: action.d/nginx-deny.conf
+    dest: /etc/fail2ban/action.d/nginx-deny.conf
+    owner: root
+    group: root
+    mode: "0644"
+  when: platform_fail2ban_nginx_enabled
+  notify: Restart fail2ban
+
+- name: Create nginx ban directory
+  ansible.builtin.file:
+    path: /etc/nginx/f2b
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  when: platform_fail2ban_nginx_enabled
+
+# An empty glob is valid nginx config, so this is safe before any bans.
+- name: Include fail2ban bans in nginx http {}
+  ansible.builtin.copy:
+    dest: /etc/nginx/conf.d/fail2ban.conf
+    content: |
+      # Managed by Ansible (platform/roles/fail2ban)
+      # One `deny <ip>;` file per fail2ban jail, written by action nginx-deny.
+      include /etc/nginx/f2b/*.conf;
+    owner: root
+    group: root
+    mode: "0644"
+  when: platform_fail2ban_nginx_enabled
+  notify: Reload nginx
+
 - name: Deploy fail2ban jail.local
   ansible.builtin.template:
     src: jail.local.j2
