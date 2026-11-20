@@ -1,5 +1,5 @@
 ---
-# Superseded by site-bedrock.yml for example.com / Bedrock sites.
+# Superseded by site-bedrock.yml for Bedrock sites.
 # See docs/getting-started.md
 
 - name: Configure nginx site
