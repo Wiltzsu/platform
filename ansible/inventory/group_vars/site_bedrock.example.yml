@@ -8,9 +8,9 @@ bedrock_domain_aliases:
 
 # Paths — folder name can differ from domain; optional symlink: /var/www/example.com -> bedrock_deploy_path
 bedrock_deploy_path: /var/www/example
-bedrock_deploy_user: william
+bedrock_deploy_user: deploy
 
-# PHP (match Bedrock composer.json: >=8.3; same as Example App on this host)
+# PHP (match Bedrock composer.json, e.g. >=8.3)
 bedrock_php_version: "8.4"
 
 # MySQL — set real values locally; prefer Ansible Vault for production

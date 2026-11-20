@@ -10,7 +10,7 @@
 #   ansible-playbook -i inventory/hosts.yml playbooks/site-bedrock.yml --check
 #   ansible-playbook -i inventory/hosts.yml playbooks/site-bedrock.yml
 
-- name: Provision Bedrock WordPress site (example.com)
+- name: Provision Bedrock WordPress site
   hosts: all
   gather_facts: true
   vars_files:
@@ -46,5 +46,5 @@
         msg:
           - "1. Fill .env on server if not done (DB password, salts from https://roots.io/salts.html)"
           - "2. sudo certbot --nginx -d {{ bedrock_domain }}{% if bedrock_domain_aliases is defined %} -d {{ bedrock_domain_aliases | join(' -d ') }}{% endif %}"
-          - "3. Wire example deploy.yml to reusable-deploy-bedrock.yml"
+          - "3. Wire the site repo's deploy.yml to reusable-deploy-bedrock.yml"
           - "4. First deploy: push to master, then wp core install or import DB"
