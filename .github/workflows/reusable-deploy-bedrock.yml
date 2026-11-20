@@ -1,6 +1,6 @@
 name: Reusable Bedrock WordPress deploy
 
-# Used by example on example.com — provision with site-bedrock.yml first.
+# Provision the site with ansible/playbooks/site-bedrock.yml first.
 
 on:
   workflow_call:
@@ -10,10 +10,9 @@ on:
         required: true
         type: string
       theme_path:
-        description: Theme path relative to repo root
-        required: false
+        description: Theme path relative to repo root (e.g. web/app/themes/example-theme)
+        required: true
         type: string
-        default: web/app/themes/example-theme
       php_version:
         description: PHP version for setup-php
         required: false

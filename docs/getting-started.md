@@ -72,8 +72,6 @@ An Ansible `site-nginx` playbook is on the roadmap.
 
 ### Bedrock WordPress (Ansible + reusable deploy)
 
-Production example: **example.com** (`example`).
-
 1. Copy and edit Bedrock vars:
 
    ```bash
@@ -97,6 +95,7 @@ Production example: **example.com** (`example`).
        uses: Wiltzsu/platform/.github/workflows/reusable-deploy-bedrock.yml@master
        with:
          deploy_path: /var/www/example   # must match bedrock_deploy_path
+         theme_path: web/app/themes/example-theme
        secrets:
          SSH_KEY: ${{ secrets.SSH_KEY }}
          HOST: ${{ secrets.HOST }}
@@ -171,4 +170,4 @@ If you disable root login or rename the deploy user, update all of the following
 
 ### One key, many apps
 
-SSH authenticates the **user**, not the site. One deploy key on the server can deploy to `/var/www/example-app`, `/var/www/example`, and so on — each app workflow sets its own `deploy_path`. Use separate keys per app only if you want tighter isolation when a repo secret leaks.
+SSH authenticates the **user**, not the site. One deploy key on the server can deploy to `/var/www/app-one`, `/var/www/app-two`, and so on — each app workflow sets its own `deploy_path`. Use separate keys per app only if you want tighter isolation when a repo secret leaks.
