@@ -3,6 +3,11 @@
 # SSH: users allowed to log in (space-separated in sshd_config)
 platform_ssh_allowed_users:
   - deploy
+  - utils-sync # GitHub Actions sync of linux-server-utils (see docs/linux-server-utils-sync.md)
+
+# Public key whose private half is the SSH_KEY secret on linux-server-utils.
+# It can only run the sync command on the server.
+# linux_server_utils_sync_ci_pubkey: "ssh-ed25519 AAAA... github-actions-utils-sync"
 
 # UFW: allow HTTP/HTTPS for web servers
 platform_ufw_allow_web: true

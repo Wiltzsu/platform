@@ -1,0 +1,22 @@
+#!/bin/sh
+# {{ ansible_managed }}
+#
+# Forced command for the GitHub Actions key in
+# {{ linux_server_utils_sync_home }}/.ssh/authorized_keys. Whatever the client
+# asks to run, only this script runs. It updates the linux-server-utils clone
+# to what GitHub has, and nothing else.
+set -eu
+
+repo={{ linux_server_utils_path | quote }}
+branch={{ linux_server_utils_version | quote }}
+
+# One sync at a time; a second run waits up to a minute.
+exec 9>"$HOME/sync.lock"
+flock -w 60 9
+
+export GIT_SSH_COMMAND="ssh -i {{ linux_server_utils_deploy_key }} -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o UpdateHostKeys=no"
+
+git -C "$repo" fetch --quiet origin "$branch"
+git -C "$repo" reset --hard --quiet "origin/$branch"
+git -C "$repo" log -1 --oneline
+echo "Sync OK"

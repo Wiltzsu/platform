@@ -2,11 +2,29 @@
 linux_server_utils_repo: "git@github.com:Wiltzsu/linux-server-utils.git"
 linux_server_utils_version: master
 linux_server_utils_path: /usr/local/src/linux-server-utils
-linux_server_utils_owner: william
-linux_server_utils_group: william
-linux_server_utils_deploy_key: "/home/william/.ssh/linux_server_utils_ro"
+
+# Unprivileged user that owns the clone and that GitHub Actions logs in as.
+# No sudo and no password. Its CI key can only run the sync command.
+# Must also be listed in platform_ssh_allowed_users (sshd AllowUsers).
+linux_server_utils_sync_user: utils-sync
+linux_server_utils_sync_home: /var/lib/utils-sync
+linux_server_utils_sync_command: /usr/local/bin/sync-linux-server-utils
+
+# Per-host read-only key for pulling from GitHub. Generated on first run.
+# Add its public key to the repo's Deploy keys with write access off.
+linux_server_utils_deploy_key: "{{ linux_server_utils_sync_home }}/.ssh/github_ro"
+
+# Public half of the GitHub Actions key pair. The private half is the
+# SSH_KEY secret on linux-server-utils. Set this in inventory (for example
+# group_vars/all.yml). Empty means no CI login is installed.
+linux_server_utils_sync_ci_pubkey: ""
+
+# Admin user from the old layout, who used to own the clone. Used only to
+# migrate and clean up legacy files.
+linux_server_utils_legacy_user: william
 
 linux_server_utils_packages:
+  - acl # lets Ansible become the unprivileged sync user
   - git
   - python3
 
