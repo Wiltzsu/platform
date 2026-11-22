@@ -6,6 +6,8 @@
   loop:
     - { direction: incoming, policy: deny }
     - { direction: outgoing, policy: allow }
+  loop_control:
+    label: "{{ item.direction }}: {{ item.policy }}"
 
 - name: Allow OpenSSH
   community.general.ufw:

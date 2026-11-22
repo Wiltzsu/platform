@@ -218,6 +218,8 @@
     job: "{{ item.job }}"
     state: present
   loop: "{{ linux_server_utils_cron_jobs }}"
+  loop_control:
+    label: "{{ item.name }}"
   when: linux_server_utils_cron_jobs | length > 0
 
 - name: Remove legacy william-user vuln-watch cron

@@ -26,6 +26,8 @@
       line: "PermitEmptyPasswords no"
     - regexp: "^#?MaxAuthTries"
       line: "MaxAuthTries 3"
+  loop_control:
+    label: "{{ item.line }}"
   notify: Reload ssh
 
 - name: Configure AllowUsers
