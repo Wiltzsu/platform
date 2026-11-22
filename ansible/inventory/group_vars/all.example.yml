@@ -4,6 +4,7 @@
 platform_ssh_allowed_users:
   - deploy
   - utils-sync # GitHub Actions sync of linux-server-utils (see docs/linux-server-utils-sync.md)
+  - deploy # GitHub Actions app deploys (see docs/deploy-user.md)
 
 # Public key whose private half is the SSH_KEY secret on linux-server-utils.
 # It can only run the sync command on the server.
@@ -27,3 +28,11 @@ platform_fail2ban_nginx_enabled: false
 
 # Bind MySQL to localhost when mysql role/package is present
 platform_mysql_bind_localhost: true
+
+# App deploys (docs/deploy-user.md). One key per app repo; the private half is
+# that repo's SSH_KEY secret.
+# deploy_user_keys:
+#   - name: example-app
+#     key: "ssh-ed25519 AAAA... deploy-example-app"
+# deploy_user_site_paths:
+#   - /var/www/example-app

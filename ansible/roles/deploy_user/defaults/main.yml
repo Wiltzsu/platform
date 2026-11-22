@@ -1,0 +1,24 @@
+---
+# Unprivileged user that GitHub Actions app deploys log in as.
+# No sudo and no password. Primary group www-data, so uploaded files are
+# readable by PHP-FPM and group-writable dirs (storage, uploads) keep working.
+# Must also be listed in platform_ssh_allowed_users (sshd AllowUsers).
+deploy_user_name: deploy
+deploy_user_home: /home/deploy
+deploy_user_group: www-data
+
+# One key per app repo, so each can be revoked on its own. Set in inventory
+# (group_vars/all.yml, gitignored: names and paths are real sites).
+#   deploy_user_keys:
+#     - name: example-app          # shown in authorized_keys
+#       key: "ssh-ed25519 AAAA... deploy-example-app"
+deploy_user_keys: []
+
+# App directories the deploy user writes to. Files there owned by the legacy
+# user are handed over once; other owners (www-data, root) are left alone.
+#   deploy_user_site_paths:
+#     - /var/www/example-app
+deploy_user_site_paths: []
+
+# Admin user that used to own the site files and run the deploys.
+deploy_user_legacy_user: william

@@ -1,0 +1,14 @@
+---
+# Restricted user for GitHub Actions app deploys (no sudo). See
+# docs/deploy-user.md.
+#
+#   ansible-playbook playbooks/site-deploy-user.yml --limit apps
+
+- name: Deploy user for app repos
+  hosts: apps
+  gather_facts: false
+
+  roles:
+    - role: deploy_user
+      tags:
+        - deploy_user

@@ -85,7 +85,7 @@ jobs:
           if ! ssh-keygen -y -f ~/.ssh/deploy_key >/dev/null 2>&1; then
             echo "Error: SSH_KEY is not a valid unencrypted private key."
             echo "Generate a deploy key with: ssh-keygen -t ed25519 -f deploy_key -N \"\""
-            echo "Then add deploy_key.pub to the server's authorized_keys and deploy_key to GitHub SSH_KEY."
+            echo "Then add deploy_key.pub to deploy_user_keys (platform deploy_user role) and deploy_key to GitHub SSH_KEY."
             exit 1
           fi
 
@@ -96,15 +96,6 @@ jobs:
 
           echo "Testing SSH connection to ${REMOTE}..."
           ssh "${SSH_OPTS[@]}" "$REMOTE" "mkdir -p '$DEPLOY_PATH' && echo 'SSH OK'"
-
-          echo "Preparing deploy directory permissions..."
-          ssh "${SSH_OPTS[@]}" "$REMOTE" bash -s <<EOF
-            set -euo pipefail
-            mkdir -p '$DEPLOY_PATH'
-            if sudo -n chown -R "\$(whoami):www-data" '$DEPLOY_PATH' 2>/dev/null; then
-              sudo -n chmod -R g+w '$DEPLOY_PATH' 2>/dev/null || true
-            fi
-          EOF
 
           echo "Uploading application files..."
           tar -cf - \
