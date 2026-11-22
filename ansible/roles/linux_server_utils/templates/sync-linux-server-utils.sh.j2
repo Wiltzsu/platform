@@ -14,7 +14,7 @@ branch={{ linux_server_utils_version | quote }}
 exec 9>"$HOME/sync.lock"
 flock -w 60 9
 
-export GIT_SSH_COMMAND="ssh -i {{ linux_server_utils_deploy_key }} -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=accept-new"
+export GIT_SSH_COMMAND="ssh -i {{ linux_server_utils_deploy_key }} -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o UpdateHostKeys=no"
 
 git -C "$repo" fetch --quiet origin "$branch"
 git -C "$repo" reset --hard --quiet "origin/$branch"
