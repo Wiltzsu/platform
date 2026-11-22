@@ -1,0 +1,79 @@
+---
+- name: Require deploy user in SSH AllowUsers
+  ansible.builtin.assert:
+    that:
+      - >-
+        (platform_ssh_allowed_users | default([]) | length == 0) or
+        (deploy_user_name in platform_ssh_allowed_users)
+    fail_msg: >-
+      Add {{ deploy_user_name }} to platform_ssh_allowed_users in
+      group_vars/all.yml, then apply it with
+      bootstrap-server.yml --tags hardening. Otherwise sshd refuses the
+      GitHub Actions deploys.
+
+- name: Create deploy user
+  ansible.builtin.user:
+    name: "{{ deploy_user_name }}"
+    group: "{{ deploy_user_group }}"
+    home: "{{ deploy_user_home }}"
+    create_home: true
+    # Deploys run "bash -s" and composer over SSH, so a real shell is needed.
+    shell: /bin/bash
+    # "*" = no password can ever match; key login still works.
+    password: "*"
+
+- name: Create root-owned .ssh dir for deploy user
+  # Root owns the dir and authorized_keys, so the deploy user cannot add keys.
+  ansible.builtin.file:
+    path: "{{ deploy_user_home }}/.ssh"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Install one restricted key per app repo
+  # restrict = no port/agent/X11 forwarding and no pty. Commands still run,
+  # which uploads and composer/artisan need.
+  ansible.builtin.copy:
+    dest: "{{ deploy_user_home }}/.ssh/authorized_keys"
+    content: |
+      # Managed by Ansible (platform: deploy_user role). Do not edit.
+      {% for k in deploy_user_keys %}
+      # {{ k.name }}
+      restrict {{ k.key | trim }}
+      {% endfor %}
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Warn when no deploy keys are configured
+  ansible.builtin.debug:
+    msg: >-
+      deploy_user_keys is empty, so no app repo can deploy as
+      {{ deploy_user_name }} yet.
+  when: deploy_user_keys | length == 0
+
+- name: Check site directories exist
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop: "{{ deploy_user_site_paths }}"
+  register: deploy_user_site_stat
+
+- name: Stop on a missing site directory
+  ansible.builtin.fail:
+    msg: "{{ item.item }} does not exist on {{ inventory_hostname }}."
+  loop: "{{ deploy_user_site_stat.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+  when: not item.stat.exists
+
+- name: Hand site files from the legacy owner over to deploy user
+  # Owner only; groups stay as they are. Files PHP-FPM created (www-data)
+  # keep their owner.
+  ansible.builtin.command:
+    cmd: >-
+      find {{ item }}/ -xdev -user {{ deploy_user_legacy_user }} -print
+      -exec chown -h {{ deploy_user_name }} {} +
+  loop: "{{ deploy_user_site_paths }}"
+  register: deploy_user_chown
+  changed_when: deploy_user_chown.stdout | length > 0
