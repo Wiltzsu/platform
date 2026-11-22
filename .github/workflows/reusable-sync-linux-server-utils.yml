@@ -51,17 +51,7 @@ jobs:
           REMOTE="${USER}@${HOST}"
           SSH_OPTS=(-i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o BatchMode=yes -o ConnectTimeout=30)
 
-          ssh "${SSH_OPTS[@]}" "$REMOTE" 'set -euo pipefail
-          REPO=/usr/local/src/linux-server-utils
-          KEY="$HOME/.ssh/linux_server_utils_ro"
-          if [[ ! -f "$KEY" ]]; then
-            echo "Missing $KEY — add read-only deploy key and run site-ops.yml on the host."
-            exit 1
-          fi
-          export GIT_SSH_COMMAND="ssh -i $KEY -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
-          git -C "$REPO" fetch origin master
-          git -C "$REPO" reset --hard origin/master
-          git -C "$REPO" log -1 --oneline
-          python3 "$REPO/monitoring/ubuntu-vuln-watch/build_email.py" --help >/dev/null 2>&1 || true
-          echo "Sync OK"
-          '
+          # The server ignores any command sent here: this key is pinned to
+          # the sync script by authorized_keys (see platform role
+          # linux_server_utils and docs/linux-server-utils-sync.md).
+          ssh -T "${SSH_OPTS[@]}" "$REMOTE"

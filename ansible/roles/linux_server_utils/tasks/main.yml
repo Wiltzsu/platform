@@ -6,6 +6,94 @@
     update_cache: true
     cache_valid_time: 3600
 
+- name: Require sync user in SSH AllowUsers
+  ansible.builtin.assert:
+    that:
+      - >-
+        (platform_ssh_allowed_users | default([]) | length == 0) or
+        (linux_server_utils_sync_user in platform_ssh_allowed_users)
+    fail_msg: >-
+      Add {{ linux_server_utils_sync_user }} to platform_ssh_allowed_users in
+      group_vars/all.yml, then apply it with
+      bootstrap-server.yml --tags hardening. Otherwise sshd refuses the
+      GitHub Actions login.
+
+# --- Sync user -------------------------------------------------------------
+
+- name: Create sync user
+  ansible.builtin.user:
+    name: "{{ linux_server_utils_sync_user }}"
+    system: true
+    home: "{{ linux_server_utils_sync_home }}"
+    create_home: true
+    shell: /bin/sh
+    # "*" = no password can ever match; key login still works.
+    password: "*"
+
+- name: Create root-owned .ssh dir for sync user
+  # Root owns the dir and authorized_keys, so the sync user cannot add keys.
+  ansible.builtin.file:
+    path: "{{ linux_server_utils_sync_home }}/.ssh"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Create known_hosts the sync user can append to
+  ansible.builtin.file:
+    path: "{{ linux_server_utils_sync_home }}/.ssh/known_hosts"
+    state: touch
+    owner: "{{ linux_server_utils_sync_user }}"
+    group: "{{ linux_server_utils_sync_user }}"
+    mode: "0644"
+    modification_time: preserve
+    access_time: preserve
+
+- name: Generate read-only GitHub key for this host
+  ansible.builtin.command:
+    cmd: >-
+      ssh-keygen -q -t ed25519 -N ''
+      -C "utils-sync@{{ inventory_hostname }}"
+      -f {{ linux_server_utils_deploy_key }}
+    creates: "{{ linux_server_utils_deploy_key }}"
+
+- name: Restrict read-only GitHub key to sync user
+  ansible.builtin.file:
+    path: "{{ linux_server_utils_deploy_key }}"
+    owner: "{{ linux_server_utils_sync_user }}"
+    group: "{{ linux_server_utils_sync_user }}"
+    mode: "0600"
+  when: not ansible_check_mode
+
+- name: Install sync command
+  ansible.builtin.template:
+    src: sync-linux-server-utils.sh.j2
+    dest: "{{ linux_server_utils_sync_command }}"
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Allow GitHub Actions key to run only the sync command
+  ansible.builtin.copy:
+    dest: "{{ linux_server_utils_sync_home }}/.ssh/authorized_keys"
+    content: |
+      # Managed by Ansible (platform: linux_server_utils role). Do not edit.
+      {% if linux_server_utils_sync_ci_pubkey | length > 0 %}
+      restrict,command="{{ linux_server_utils_sync_command }}" {{ linux_server_utils_sync_ci_pubkey | trim }}
+      {% endif %}
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Warn when no GitHub Actions key is configured
+  ansible.builtin.debug:
+    msg: >-
+      linux_server_utils_sync_ci_pubkey is empty, so GitHub Actions cannot log
+      in as {{ linux_server_utils_sync_user }} yet.
+  when: linux_server_utils_sync_ci_pubkey | length == 0
+
+# --- Clone -----------------------------------------------------------------
+
 - name: Ensure parent directory for clone exists
   ansible.builtin.file:
     path: "{{ linux_server_utils_path | dirname }}"
@@ -14,14 +102,75 @@
     group: root
     mode: "0755"
 
-- name: Ensure deploy user owns repo directory
+- name: Ensure sync user owns repo directory
   ansible.builtin.file:
     path: "{{ linux_server_utils_path }}"
     state: directory
-    owner: "{{ linux_server_utils_owner }}"
-    group: "{{ linux_server_utils_group }}"
+    owner: "{{ linux_server_utils_sync_user }}"
+    group: "{{ linux_server_utils_sync_user }}"
     mode: "0755"
-    recurse: true
+
+- name: Check for vuln-watch config
+  ansible.builtin.stat:
+    path: "{{ linux_server_utils_path }}/monitoring/ubuntu-vuln-watch/config.env"
+  register: linux_server_utils_vuln_config
+
+- name: Keep vuln-watch config readable by root only
+  # Read by root's cron; holds mail settings the sync user has no need for.
+  ansible.builtin.file:
+    path: "{{ linux_server_utils_path }}/monitoring/ubuntu-vuln-watch/config.env"
+    owner: root
+    group: root
+    mode: "0600"
+  when: linux_server_utils_vuln_config.stat.exists
+
+- name: Hand files from the legacy owner over to sync user
+  # One-time migration. Files root's cron creates later stay root-owned.
+  ansible.builtin.command:
+    cmd: >-
+      find {{ linux_server_utils_path }}
+      -path {{ linux_server_utils_path }}/monitoring/ubuntu-vuln-watch/config.env -prune
+      -o -user {{ linux_server_utils_legacy_user }} -print
+      -exec chown -h {{ linux_server_utils_sync_user }}:{{ linux_server_utils_sync_user }} {} +
+  register: linux_server_utils_chown
+  changed_when: linux_server_utils_chown.stdout | length > 0
+
+- name: Check that the read-only key can pull from GitHub
+  ansible.builtin.command:
+    cmd: git ls-remote {{ linux_server_utils_repo }} HEAD
+  environment:
+    GIT_SSH_COMMAND: >-
+      ssh -i {{ linux_server_utils_deploy_key }} -o IdentitiesOnly=yes
+      -o BatchMode=yes -o StrictHostKeyChecking=accept-new
+  become: true
+  become_user: "{{ linux_server_utils_sync_user }}"
+  register: linux_server_utils_ls_remote
+  changed_when: false
+  failed_when: false
+  when: not ansible_check_mode
+
+- name: Read public half of the read-only key
+  ansible.builtin.slurp:
+    src: "{{ linux_server_utils_deploy_key }}.pub"
+  register: linux_server_utils_ro_pub
+  when:
+    - not ansible_check_mode
+    - linux_server_utils_ls_remote.rc != 0
+
+- name: Stop until the read-only key is added to GitHub
+  ansible.builtin.fail:
+    msg: |
+      {{ inventory_hostname }} cannot pull linux-server-utils yet.
+      Add this key under linux-server-utils > Settings > Deploy keys,
+      title "utils-sync@{{ inventory_hostname }}", write access OFF:
+
+      {{ linux_server_utils_ro_pub.content | b64decode | trim }}
+
+      Then run this playbook again.
+      git said: {{ linux_server_utils_ls_remote.stderr | default('') | trim }}
+  when:
+    - not ansible_check_mode
+    - linux_server_utils_ls_remote.rc != 0
 
 - name: Clone or update linux-server-utils
   ansible.builtin.git:
@@ -32,15 +181,17 @@
     key_file: "{{ linux_server_utils_deploy_key }}"
     force: true
   become: true
-  become_user: "{{ linux_server_utils_owner }}"
+  become_user: "{{ linux_server_utils_sync_user }}"
+
+# --- Config and cron -------------------------------------------------------
 
 - name: Migrate vuln-watch config from legacy install path when present
   ansible.builtin.copy:
-    src: "/home/{{ linux_server_utils_owner }}/scripts/ubuntu-vuln-watch/config.env"
+    src: "/home/{{ linux_server_utils_legacy_user }}/scripts/ubuntu-vuln-watch/config.env"
     dest: "{{ linux_server_utils_path }}/monitoring/ubuntu-vuln-watch/config.env"
     remote_src: true
-    owner: "{{ linux_server_utils_owner }}"
-    group: "{{ linux_server_utils_group }}"
+    owner: root
+    group: root
     mode: "0600"
     force: false
   failed_when: false
@@ -50,8 +201,8 @@
     src: "{{ linux_server_utils_path }}/monitoring/ubuntu-vuln-watch/config.env.example"
     dest: "{{ linux_server_utils_path }}/monitoring/ubuntu-vuln-watch/config.env"
     remote_src: true
-    owner: "{{ linux_server_utils_owner }}"
-    group: "{{ linux_server_utils_group }}"
+    owner: root
+    group: root
     mode: "0600"
     force: false
 
@@ -72,13 +223,13 @@
 - name: Remove legacy william-user vuln-watch cron
   ansible.builtin.cron:
     name: ubuntu-vuln-watch
-    user: "{{ linux_server_utils_owner }}"
+    user: "{{ linux_server_utils_legacy_user }}"
     state: absent
 
 - name: Remove legacy root cron entries for old script paths
   ansible.builtin.shell: |
     set -euo pipefail
-    legacy='/home/{{ linux_server_utils_owner }}/scripts/ubuntu-vuln-watch'
+    legacy='/home/{{ linux_server_utils_legacy_user }}/scripts/ubuntu-vuln-watch'
     if ! crontab -l 2>/dev/null | grep -q "$legacy"; then
       exit 0
     fi
