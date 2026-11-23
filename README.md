@@ -1,38 +1,28 @@
-# platform
+### platform
 
-Personal **Ubuntu VPS lab**: Ansible playbooks, reusable GitHub Actions, and nginx templates for sites I run on my own servers (apps on one host, monitoring on another).
+Ansible playbooks, reusable GitHub Actions workflows and nginx templates I use to set up and deploy to my own Ubuntu servers (apps on one host, monitoring on another). It's a personal lab, not a shared framework or anyone's production setup. Day-to-day server scripts live in the companion repo [linux-server-utils](https://github.com/Wiltzsu/linux-server-utils).
 
-Companion repo for day-to-day server scripts: [`linux-server-utils`](https://github.com/Wiltzsu/linux-server-utils).
+New host or new site? Start with [docs/getting-started.md](docs/getting-started.md): bootstrap, deploy keys, Bedrock provisioning, first deploy.
 
-**Start here:** [`docs/getting-started.md`](docs/getting-started.md) - bootstrap, deploy keys, Bedrock provision, first deploy.
+### What's here
 
-## What this is
+| Path | What it does |
+| --- | --- |
+| [ansible/playbooks/bootstrap-server.yml](ansible/playbooks/bootstrap-server.yml) | Baseline for a fresh Ubuntu VPS: common packages, SSH hardening, UFW, fail2ban (SSH plus nginx probe/4xx-flood jails) and unattended upgrades. Each role is tagged, so one can be applied to a live host on its own. |
+| [ansible/playbooks/site-deploy-user.yml](ansible/playbooks/site-deploy-user.yml) | Restricted `deploy` user for GitHub Actions deploys: no sudo, one `restrict`ed key per app repo, root-owned `authorized_keys`. See [docs/deploy-user.md](docs/deploy-user.md). |
+| [ansible/playbooks/site-bedrock.yml](ansible/playbooks/site-bedrock.yml) | Bedrock WordPress site: nginx and PHP-FPM, MySQL database and user, site directories, first `.env` and the nginx vhost. |
+| [ansible/playbooks/site-ops.yml](ansible/playbooks/site-ops.yml) | Puts linux-server-utils on a host: restricted `utils-sync` user and read-only GitHub key, the clone, local config from examples, and cron jobs from inventory. |
+| [ansible/playbooks/site-nginx.yml](ansible/playbooks/site-nginx.yml) | Placeholder for generic nginx-only sites; for now it just points to `site-bedrock.yml`. |
+| [ansible/inventory](ansible/inventory) | Example inventory and group vars for the app + monitoring host split. |
+| [.github/workflows](.github/workflows) | Reusable deploy workflows for Bedrock and Laravel, and the linux-server-utils sync ([docs/linux-server-utils-sync.md](docs/linux-server-utils-sync.md)). |
+| [templates/nginx-site.conf.j2](templates/nginx-site.conf.j2) | nginx vhost template for Laravel apps, copied in by hand for now (see getting started). |
+| [terraform/hetzner](terraform/hetzner/README.md) | Placeholder for provisioning Hetzner VPS hosts. Nothing to apply yet. |
+| [docs](docs) | Getting started, deploy user, utils sync, and [testing playbook changes](docs/testing-changes.md) on staging or a throwaway VPS. |
 
-- **Bootstrap / hardening** for fresh VPS hosts (`ansible/playbooks/bootstrap-server.yml`)
-- **Bedrock WordPress** site shell + [`reusable-deploy-bedrock.yml`](.github/workflows/reusable-deploy-bedrock.yml)
-- **Laravel deploy** via [`reusable-deploy-laravel.yml`](.github/workflows/reusable-deploy-laravel.yml) (nginx vhost setup is still manual; see getting started)
-- **Ops scripts on hosts** via [`site-ops.yml`](ansible/playbooks/site-ops.yml) (clone [`linux-server-utils`](https://github.com/Wiltzsu/linux-server-utils), cron, local config templates)
-- **Utils repo auto-sync** via [`reusable-sync-linux-server-utils.yml`](.github/workflows/reusable-sync-linux-server-utils.yml) (called from linux-server-utils on push; see [`docs/linux-server-utils-sync.md`](docs/linux-server-utils-sync.md))
-- **Multi-host inventory** pattern (app server + monitoring server)
-- **CI-friendly deploy keys** documented in getting started
+### Not done yet
 
-## What this is not
+Laravel nginx setup through Ansible is still manual, and there is no Terraform or Kubernetes yet.
 
-- Not a product, shared framework, or copy-paste “platform team” stack
-- Not employer or client production automation - personal lab only
-- Not complete **IaC**: no Terraform module here yet; no Kubernetes
-- Not every app type: Laravel nginx via Ansible (`site-nginx.yml`) is still a stub
-
-## Repo layout
-
-| Path | Purpose |
-|------|---------|
-| `ansible/` | Playbooks, roles, inventory examples |
-| `.github/workflows/` | Reusable workflows (app deploy + linux-server-utils sync) |
-| `docs/getting-started.md` | Operator runbook for this lab |
-| `docs/linux-server-utils-sync.md` | Push-to-server sync for linux-server-utils |
-| `docs/testing-changes.md` | Staging vs ephemeral Hetzner VPS for playbook tests |
-
-## License
+### License
 
 MIT
