@@ -17,7 +17,7 @@ bantime = {{ platform_fail2ban_sshd_bantime }}
 findtime = {{ platform_fail2ban_sshd_findtime }}
 {% if platform_fail2ban_nginx_enabled %}
 
-# --- nginx jails (DEV-16) -------------------------------------------------
+# --- nginx jails ----------------------------------------------------------
 # Banned in nginx (action nginx-deny), not the firewall: behind Cloudflare
 # the firewall only sees Cloudflare IPs. See action.d/nginx-deny.conf.
 

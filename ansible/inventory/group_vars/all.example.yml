@@ -21,7 +21,7 @@ platform_fail2ban_sshd_maxretry: 3
 platform_fail2ban_sshd_bantime: 1h
 platform_fail2ban_sshd_findtime: 10m
 
-# fail2ban nginx jails (DEV-16); see roles/fail2ban/defaults/main.yml
+# fail2ban nginx jails; see roles/fail2ban/defaults/main.yml
 # for thresholds. Turn on per host in host_vars once nginx logs real IPs.
 platform_fail2ban_nginx_enabled: false
 # platform_fail2ban_ignoreip: ["203.0.113.10"]
