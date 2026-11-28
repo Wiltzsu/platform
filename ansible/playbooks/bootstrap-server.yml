@@ -28,6 +28,7 @@
     - { role: common, tags: [common] }
     - { role: hardening, tags: [hardening] }
     - { role: ufw, tags: [ufw] }
+    - { role: cloudflare, tags: [cloudflare], when: platform_cloudflare_realip_enabled }
     - { role: fail2ban, tags: [fail2ban] }
     - { role: unattended_upgrades, tags: [unattended_upgrades] }
 

@@ -4,6 +4,9 @@ platform_ufw_allow_web: true
 # fail2ban nginx jails: bans happen in nginx, see roles/fail2ban
 platform_fail2ban_nginx_enabled: true
 
+# Cloudflare real IP for nginx, see roles/cloudflare
+platform_cloudflare_realip_enabled: true
+
 linux_server_utils_cron_jobs:
   - name: ubuntu-vuln-watch
     minute: "30"

@@ -1,0 +1,14 @@
+---
+# Both handlers listen on one topic and run in file order: test first, then
+# reload. If `nginx -t` fails the play stops and the running nginx keeps its
+# old config.
+- name: Test nginx config
+  ansible.builtin.command: nginx -t
+  changed_when: false
+  listen: cloudflare realip changed
+
+- name: Reload nginx after real IP change
+  ansible.builtin.systemd_service:
+    name: nginx
+    state: reloaded
+  listen: cloudflare realip changed

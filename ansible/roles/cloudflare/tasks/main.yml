@@ -1,0 +1,25 @@
+---
+- name: Require Cloudflare ranges
+  ansible.builtin.assert:
+    that:
+      - platform_cloudflare_ipv4 | length > 0
+      - platform_cloudflare_ipv6 | length > 0
+      # The ipv4/ipv6 filters drop anything that isn't a valid address or
+      # CIDR, so a changed count means a malformed entry (e.g. a missing
+      # `- ` in YAML gluing several ranges into one string).
+      - platform_cloudflare_ipv4 | ansible.utils.ipv4 | length == platform_cloudflare_ipv4 | length
+      - platform_cloudflare_ipv6 | ansible.utils.ipv6 | length == platform_cloudflare_ipv6 | length
+    fail_msg: >-
+      Cloudflare range lists are empty or contain invalid entries. Refusing to
+      write a real IP config that could trust nobody (every visitor would log
+      as a Cloudflare IP).
+    quiet: true
+
+- name: Write Cloudflare real IP config for nginx
+  ansible.builtin.template:
+    src: cloudflare-realip.conf.j2
+    dest: /etc/nginx/conf.d/cloudflare-realip.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: cloudflare realip changed
